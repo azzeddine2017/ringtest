@@ -28,17 +28,17 @@ class TestReporter
 
     func printTestPass oTest
         cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
-        ? "  " + cGreen + "✓" + cReset + " " + cGray + oTest.cName + " " + cTimeStr + cReset
+        ? "  " + cGreen + iif(isWindows(),"[PASS] ", "✓ ") + cReset + " " + cGray + oTest.cName + " " + cTimeStr + cReset
 
     func printTestFail oTest
         cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
-        ? "  " + cRed + "✗ " + oTest.cName + " " + cTimeStr + cReset
+        ? "  " + cRed + iif(isWindows(),"[FAIL] ", "✗ ") + oTest.cName + " " + cTimeStr + cReset
         ? "    " + cRed + cBold + "Error: " + cReset + cRed + oTest.cErrorMessage + cReset
         
         # Explain common Ring errors with clear actionable tips
         cHint = explainRingError(oTest.cErrorMessage)
         if cHint != ""
-            ? "    " + cYellow + "💡 Tip: " + cReset + cGray + cHint + cReset
+            ? "    " + cYellow + iif(isWindows(),"[Tip] ","💡 Tip:") + cReset + cGray + cHint + cReset
         ok
 
         # Show diff if error message contains expected/received values
@@ -57,7 +57,7 @@ class TestReporter
         
         cHint = explainRingError(cErrorMsg)
         if cHint != ""
-            ? "  " + cBold + "💡 Diagnosis: " + cReset + cCyan + cHint + cReset
+            ? "  " + cBold + iif(isWindows(),"[Diagnosis] ","💡 Diagnosis: ") + cReset + cCyan + cHint + cReset
         ok
         ? ""
 
