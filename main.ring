@@ -19,6 +19,7 @@ func main
     ok
 
     runner = new TestRunner()
+    runner.oParser = oParser
     runner.setFilter(oParser.cFilter)
     runner.setWatchMode(oParser.bWatchMode)
     runner.setJsonOutput(oParser.bJsonOutput)
@@ -52,7 +53,7 @@ func showHelp
     ? "  ringtest - The Modern Test Runner for Ring Language     "
     ? "=========================================================="
     ? "Usage:"
-    ? "  ring main.ring [options] [target_path]"
+    ? "  ringtest [options] [target_path]"
     ? ""
     ? "Options:"
     ? "  -h, --help        Show this help documentation"
@@ -62,10 +63,10 @@ func showHelp
     ? "  -j, --json        Output results in JSON format"
     ? ""
     ? "Examples:"
-    ? "  ring main.ring                     # Discover and run all tests"
-    ? "  ring main.ring tests/              # Run all tests in 'tests/' folder"
-    ? "  ring main.ring tests/sample_test.ring # Run specific test file"
-    ? "  ring main.ring --filter=math       # Run only tests matching 'math'"
-    ? "  ring main.ring --watch             # Watch mode"
-    ? "  ring main.ring --json              # JSON output"
+    ? "  ringtest                     # Discover and run all tests"
+    ? "  ringtest tests/              # Run all tests in 'tests/' folder"
+    ? "  ringtest tests/sample_test.ring # Run specific test file"
+    ? "  ringtest --filter=math       # Run only tests matching 'math'"
+    ? "  ringtest --watch             # Watch mode"
+    ? "  ringtest --json              # JSON output"
     ? "=========================================================="

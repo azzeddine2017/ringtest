@@ -358,16 +358,101 @@ class TestRunner
         return (nTotalFailed = 0)
 
     func runWatch
-        ? oReporter.cCyan + "Watch mode enabled. Press Ctrl+C to stop." + oReporter.cReset
+        ? oReporter.cCyan + "==========================================================" + oReporter.cReset
+        ? oReporter.cCyan + "  Watch mode enabled. Waiting for file changes..." + oReporter.cReset
+        ? oReporter.cCyan + "  Press Ctrl+C to exit." + oReporter.cReset
+        ? oReporter.cCyan + "==========================================================" + oReporter.cReset
+        ? ""
+
+        # Resolve watch directory from caller working directory
+        cWatchDir = sysget("RINGTEST_CALLER_DIR")
+        if cWatchDir = "" or cWatchDir = NULL
+            cWatchDir = sysget("RINGTEST_CWD")
+        ok
+        if cWatchDir = "" or cWatchDir = NULL
+            cWatchDir = "."
+        ok
+        if oParser != NULL and oParser.cTargetDirectory != "" and oParser.cTargetDirectory != "."
+            cWatchDir = oParser.cTargetDirectory
+        ok
+        cWatchDir = substr(cWatchDir, char(92), "/")
+ 
+        # 1. Initial test run
+        nTotalPassed = 0
+        nTotalFailed = 0
+        nSuitesPassed = 0
+        nSuitesTotal = 0
+        findTestFiles(cWatchDir)
+        runAll()
+
+        cLastSnapshot = getFileSnapshot(cWatchDir)
+
+        # 2. Watch loop: only re-runs when a file is modified, added, or deleted
         while true
-            nTotalPassed = 0
-            nTotalFailed = 0
-            nSuitesPassed = 0
-            nSuitesTotal = 0
-            findTestFiles(oParser.cTargetDirectory)
-            runAll()
             sleep(1)
+            cCurrentSnapshot = getFileSnapshot(cWatchDir)
+            if cCurrentSnapshot != cLastSnapshot
+                cLastSnapshot = cCurrentSnapshot
+                ? ""
+                ? oReporter.cYellow + "--------------------------------------------------" + oReporter.cReset
+                ? oReporter.cYellow + "  File change detected. Re-running tests..." + oReporter.cReset
+                ? oReporter.cYellow + "--------------------------------------------------" + oReporter.cReset
+                ? ""
+                nTotalPassed = 0
+                nTotalFailed = 0
+                nSuitesPassed = 0
+                nSuitesTotal = 0
+                findTestFiles(cWatchDir)
+                runAll()
+            ok
         end
+
+    func getFileSnapshot cDir
+        if cDir = "" or cDir = NULL
+            cDir = "."
+        ok
+        aFiles = []
+        scanDirForSnapshot(cDir, aFiles)
+        cSignature = ""
+        for aItem in aFiles
+            cSignature += aItem[1] + ":" + string(aItem[2]) + ":" + string(aItem[3]) + ";"
+        next
+        return cSignature
+ 
+    func scanDirForSnapshot cPath, aOutList
+        aEntries = dir(cPath)
+        for entry in aEntries
+            cName = entry[1]
+            bIsDir = entry[2]
+
+            if cName = "." or cName = ".."
+                loop
+            ok
+            if left(cName, 1) = "." or cName = "bin" or cName = ".git"
+                loop
+            ok
+
+            cFullPath = cPath + "/" + cName
+            cFullPath = substr(cFullPath, char(92), "/")
+
+            if bIsDir
+                if cName != ".git" and cName != ".rvenv" and cName != ".ringenv" and cName != "bin"
+                    scanDirForSnapshot(cFullPath, aOutList)
+                ok
+            else
+                if substr(cName, ".ring") or substr(cName, ".conf") or substr(cName, ".json")
+                    nSize = getfilesize(cFullPath)
+                    cContent = read(cFullPath)
+                    cHash = ""
+                    try
+                        cHash = SHA256(cContent)
+                    catch
+                        cHash = string(len(cContent))
+                    done
+                    aOutList + [cFullPath, nSize, cHash]
+                ok
+            ok
+        next
 
     private
 
