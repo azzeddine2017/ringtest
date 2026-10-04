@@ -14,7 +14,7 @@ func main
     ok
 
     if oParser.bShowVersion
-        ? "ringtest version 1.0.0"
+        ? "ringtest version 1.0.3"
         return
     ok
 

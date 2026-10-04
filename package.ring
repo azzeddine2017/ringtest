@@ -7,18 +7,18 @@ aPackageInfo = [
 	:developer = "Azzeddine Remmal",
 	:email = "azzeddine.remmal@gmail.com",
 	:license = "MIT License",
-	:version = "1.0.1",
+	:version = "1.0.3",
 	:ringversion = "1.21",
 	:versions = [
 		[
-			:version = "1.0.1",
+			:version = "1.0.3",
 			:branch = "main"
 		]
 	],
 	:libs = [
 		[
 			:name = "stdlib",
-			:version = "1.0",
+			:version = "1.0.24",
 			:providerusername = ""
 		],
 		[
