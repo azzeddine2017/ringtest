@@ -148,21 +148,54 @@ the evaluation returns. Keep shared state in the framework context instead:
 | `ctxAdd(key, n)` | Numerically add `n` |
 
 ```ring
-beforeEach(func {
-    ctxIncr("nBefore")
-})
+describe("Database Suite", func {
 
-describe("Counter", func {
-    it("counts runs", func {
-        expect(ctxGet("nBefore")).toBe(1)
+    beforeAll(func {
+        # Runs once before all tests in this suite
+        ctxSet("nDbConns", 1)
+    })
+
+    beforeEach(func {
+        # Runs before each test in this suite
+        ctxIncr("nTxCount")
+    })
+
+    afterEach(func {
+        # Runs after each test in this suite
+    })
+
+    afterAll(func {
+        # Runs once after all tests in this suite
+        ctxSet("nDbConns", 0)
+    })
+
+    test("should perform transaction", func {
+        expect(ctxGet("nDbConns")).toBe(1)
     })
 })
 ```
 
-> Use `ctxIncr`/`ctxAdd` rather than `ctxGet(k) + 1`: Ring's `+` **concatenates** when the
-> value is a string, so `"" + 1` becomes `"1"` and a second `+ 1` becomes `"11"`.
+> You can also define global `beforeAll`, `beforeEach`, `afterEach`, and `afterAll` at the top level outside of `describe()`.
 
-The context is cleared before each test file.
+---
+
+## Reporting & CI/CD Integration
+
+### Interactive HTML Report (`--html`)
+Generate a self-contained, standalone dark-mode HTML test dashboard with interactive metrics cards, search filter, and expandable error diffs:
+```bash
+ringtest --html
+# Or specify a custom output path:
+ringtest --html=reports/dashboard.html
+```
+
+### Standard JUnit XML Report (`--junit` / `--xml`)
+Generate standard JUnit XML reports for integration with CI/CD platforms like GitHub Actions, GitLab CI, Jenkins, and Azure DevOps:
+```bash
+ringtest --junit
+# Or specify a custom output path:
+ringtest --junit=test-results.xml
+```
 
 ---
 
@@ -190,22 +223,26 @@ Usage:
   ringtest [options] [target_path]
 
 Options:
-  -h, --help        Show help documentation
-  -v, --version     Display current version
-  --filter=<text>   Filter tests by description
-  -w, --watch       Watch mode: re-run tests on file changes
-  -j, --json        Output results in JSON format
+  -h, --help           Show help documentation
+  -v, --version        Display current version
+  --filter=<text>      Filter tests by description
+  -w, --watch          Watch mode: re-run tests on file changes
+  -j, --json           Output results in JSON format
+  --html[=<path>]      Generate modern interactive HTML dashboard
+  --junit[=<path>]     Generate JUnit XML report for CI/CD
+  --xml[=<path>]       Alias for --junit
 
 Examples:
-  ringtest                     # Discover and run all tests
-  ringtest tests/              # Run all tests in 'tests/' directory
-  ringtest tests/math_test.ring # Run a specific test file
-  ringtest --filter=math       # Run only tests matching 'math'
-  ringtest --watch             # Watch mode
-  ringtest --json              # JSON output
+  ringtest                        # Discover and run all tests
+  ringtest tests/                 # Run all tests in 'tests/' directory
+  ringtest tests/math_test.ring   # Run a specific test file
+  ringtest --filter=math          # Run only tests matching 'math'
+  ringtest --watch                # Watch mode
+  ringtest --html                 # Generate 'test-report.html'
+  ringtest --junit=report.xml     # Generate JUnit XML report
 ```
 
-> `--filter` matches the **individual `it()` description**, not the suite or file name.
+> `--filter` matches the **individual `it()` / `test()` description**, not the suite or file name.
 > A filter matching nothing reports `0 passed, 0 total` and still exits `0`.
 
 ---

@@ -4,28 +4,52 @@
 # context (ctxSet / ctxGet / ctxIncr) - a test file's own top-level variables are
 # NOT visible from inside it()/beforeEach callbacks (the eval() scope pops).
 
-ctxSet("nBefore", 0)
-ctxSet("nAfter", 0)
+ctxSet("nGlobalBeforeEach", 0)
+ctxSet("nGlobalAfterEach", 0)
+ctxSet("nSuiteBeforeAll", 0)
+ctxSet("nSuiteBeforeEach", 0)
+ctxSet("nSuiteAfterEach", 0)
 
 beforeEach(func {
-    ctxIncr("nBefore")
+    ctxIncr("nGlobalBeforeEach")
 })
 
 afterEach(func {
-    ctxIncr("nAfter")
+    ctxIncr("nGlobalAfterEach")
 })
 
-describe("Hooks Suite", func {
+describe("Hooks Suite - Lifecycle Hooks", func {
 
-    it("runs beforeEach once before the first test", func {
-        expect(ctxGet("nBefore")).toBe(1)
+    beforeAll(func {
+        ctxIncr("nSuiteBeforeAll")
     })
 
-    it("runs beforeEach again before the second test", func {
-        expect(ctxGet("nBefore")).toBe(2)
+    beforeEach(func {
+        ctxIncr("nSuiteBeforeEach")
     })
 
-    it("ran afterEach for the two previous tests", func {
-        expect(ctxGet("nAfter")).toBe(2)
+    afterEach(func {
+        ctxIncr("nSuiteAfterEach")
+    })
+
+    test("should execute beforeAll exactly once before any test", func {
+        expect(ctxGet("nSuiteBeforeAll")).toBe(1)
+        expect(ctxGet("nSuiteBeforeEach")).toBe(1)
+        expect(ctxGet("nGlobalBeforeEach")).toBe(1)
+    })
+
+    it("should execute beforeEach on subsequent tests", func {
+        expect(ctxGet("nSuiteBeforeAll")).toBe(1)
+        expect(ctxGet("nSuiteBeforeEach")).toBe(2)
+        expect(ctxGet("nGlobalBeforeEach")).toBe(2)
+        expect(ctxGet("nSuiteAfterEach")).toBe(1)
+        expect(ctxGet("nGlobalAfterEach")).toBe(1)
+    })
+
+    test("should have accumulated afterEach calls after third test", func {
+        expect(ctxGet("nSuiteBeforeAll")).toBe(1)
+        expect(ctxGet("nSuiteBeforeEach")).toBe(3)
+        expect(ctxGet("nSuiteAfterEach")).toBe(2)
+        expect(ctxGet("nGlobalAfterEach")).toBe(2)
     })
 })

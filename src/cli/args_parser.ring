@@ -10,6 +10,10 @@ class ArgsParser
     bWatchMode = false
     bParallel = false
     bJsonOutput = false
+    bHtmlReport = false
+    cHtmlReportPath = ""
+    bJunitReport = false
+    cJunitReportPath = ""
 
     func parse aArgs
         nLen = len(aArgs)
@@ -44,11 +48,26 @@ class ArgsParser
                 bShowVersion = true
                 return self
             but left(cArg, 9) = "--filter="
-                cFilter = substr(cArg, 10, len(cArg))
+                cFilter = substr(cArg, 10, len(cArg) - 9)
             but cArg = "--watch" or cArg = "-w"
                 bWatchMode = true
             but cArg = "--json" or cArg = "-j"
                 bJsonOutput = true
+            but cArg = "--html"
+                bHtmlReport = true
+                cHtmlReportPath = "reports/test-report.html"
+            but left(cArg, 7) = "--html="
+                bHtmlReport = true
+                cHtmlReportPath = substr(cArg, 8, len(cArg) - 7)
+            but cArg = "--junit" or cArg = "--xml"
+                bJunitReport = true
+                cJunitReportPath = "reports/test-report.xml"
+            but left(cArg, 8) = "--junit="
+                bJunitReport = true
+                cJunitReportPath = substr(cArg, 9, len(cArg) - 8)
+            but left(cArg, 6) = "--xml="
+                bJunitReport = true
+                cJunitReportPath = substr(cArg, 7, len(cArg) - 6)
             but left(cArg, 2) != "-"
                 # Target path or file passed - resolve against caller dir
                 cResolved = cArg

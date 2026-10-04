@@ -3,9 +3,14 @@
 # Global registry holding all registered suites
 aGlobalTestSuites = []
 
-# Global beforeEach/afterEach hooks
+# Global lifecycle hooks
+aGlobalBeforeAll  = []
 aGlobalBeforeEach = []
-aGlobalAfterEach = []
+aGlobalAfterEach  = []
+aGlobalAfterAll   = []
+
+# Active suite tracking for lexical describe() scope
+nCurrentSuiteIndex = 0
 
 # Shared context that survives across eval-scope boundaries.
 aGlobalContext = []
@@ -49,9 +54,6 @@ func ctxGet cKey
     return aGlobalContext[cKey]
 
 func ctxIncr cKey
-    # Numeric increment by 1. Exists because ctxGet() on a missing key returns ""
-    # and Ring's + then CONCATENATES: "" + 1 = "1", "1" + 1 = "11".
-    # Note: Ring has no optional parameters - ctxAdd() is the 2-arg variant.
     return ctxAdd(cKey, 1)
 
 func ctxAdd cKey, nBy
@@ -67,12 +69,18 @@ func ctxAdd cKey, nBy
 
 func clearGlobalSuites
     aGlobalTestSuites = []
+    aGlobalBeforeAll  = []
     aGlobalBeforeEach = []
-    aGlobalAfterEach = []
-    aGlobalContext = []
+    aGlobalAfterEach  = []
+    aGlobalAfterAll   = []
+    aGlobalContext    = []
+    nCurrentSuiteIndex = 0
 
 func getGlobalSuites
     return aGlobalTestSuites
+
+func getGlobalBeforeAll
+    return aGlobalBeforeAll
 
 func getGlobalBeforeEach
     return aGlobalBeforeEach
@@ -80,9 +88,14 @@ func getGlobalBeforeEach
 func getGlobalAfterEach
     return aGlobalAfterEach
 
+func getGlobalAfterAll
+    return aGlobalAfterAll
+
 func describe cSuiteName, vSuiteBody
     oSuite = new TestSuite(cSuiteName)
     add(aGlobalTestSuites, oSuite)
+    nOldSuiteIndex = nCurrentSuiteIndex
+    nCurrentSuiteIndex = len(aGlobalTestSuites)
 
     if !isNull(vSuiteBody)
         vFn = vSuiteBody
@@ -90,9 +103,11 @@ func describe cSuiteName, vSuiteBody
             call vFn()
         catch
             ? "[SUITE DEF ERROR in '" + cSuiteName + "'] " + cCatchError
+            nCurrentSuiteIndex = nOldSuiteIndex
             raise(cCatchError)
         done
     ok
+    nCurrentSuiteIndex = nOldSuiteIndex
 
 func it cTestName, vTestFunc
     if len(aGlobalTestSuites) = 0
@@ -104,11 +119,36 @@ func it cTestName, vTestFunc
     oSuite = ref(aGlobalTestSuites[nLastIndex])
     oSuite.addTest(oTest)
 
+func test cTestName, vTestFunc
+    it(cTestName, vTestFunc)
+
+func beforeAll vFn
+    if nCurrentSuiteIndex > 0 and nCurrentSuiteIndex <= len(aGlobalTestSuites)
+        add(aGlobalTestSuites[nCurrentSuiteIndex].aBeforeAll, vFn)
+    else
+        add(aGlobalBeforeAll, vFn)
+    ok
+
 func beforeEach vFn
-    add(aGlobalBeforeEach, vFn)
+    if nCurrentSuiteIndex > 0 and nCurrentSuiteIndex <= len(aGlobalTestSuites)
+        add(aGlobalTestSuites[nCurrentSuiteIndex].aBeforeEach, vFn)
+    else
+        add(aGlobalBeforeEach, vFn)
+    ok
 
 func afterEach vFn
-    add(aGlobalAfterEach, vFn)
+    if nCurrentSuiteIndex > 0 and nCurrentSuiteIndex <= len(aGlobalTestSuites)
+        add(aGlobalTestSuites[nCurrentSuiteIndex].aAfterEach, vFn)
+    else
+        add(aGlobalAfterEach, vFn)
+    ok
+
+func afterAll vFn
+    if nCurrentSuiteIndex > 0 and nCurrentSuiteIndex <= len(aGlobalTestSuites)
+        add(aGlobalTestSuites[nCurrentSuiteIndex].aAfterAll, vFn)
+    else
+        add(aGlobalAfterAll, vFn)
+    ok
 
 # Classes definition
 class TestCase
@@ -126,6 +166,10 @@ class TestCase
 class TestSuite
     cName = ""
     aTests = []
+    aBeforeAll = []
+    aBeforeEach = []
+    aAfterEach = []
+    aAfterAll = []
     nPassCount = 0
     nFailCount = 0
     nTotalDuration = 0.0
@@ -133,6 +177,10 @@ class TestSuite
     func init cSuiteName
         cName = cSuiteName
         aTests = []
+        aBeforeAll = []
+        aBeforeEach = []
+        aAfterEach = []
+        aAfterAll = []
         return self
 
     func addTest oTest
