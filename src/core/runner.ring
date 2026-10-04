@@ -97,6 +97,9 @@ class TestRunner
             cTempScript = cProjectDir + "/.ringtest_worker_" + string(nRand) + ".ring"
             cTempScript = substr(cTempScript, char(92), "/")
 
+            cTempResFile = cProjectDir + "/.ringtest_res_" + string(nRand) + ".ring"
+            cTempResFile = substr(cTempResFile, char(92), "/")
+
             cFilterEsc = cFilter
             cCode = 'load "stdlibcore.ring"' + nl +
                     'load "' + cRingTestSrc + '"' + nl +
@@ -104,6 +107,7 @@ class TestRunner
                     'runner = new TestRunner()' + nl +
                     'runner.setFilter("' + cFilterEsc + '")' + nl +
                     'bSuccess = runner.runExecutedSuites("' + cFilePath + '")' + nl +
+                    'runner.saveResultsPayload("' + cTempResFile + '")' + nl +
                     '? "___RINGTEST_RESULTS_START___"' + nl +
                     'runner.printResultsPayload()' + nl +
                     '? "___RINGTEST_RESULTS_END___"' + nl +
@@ -145,11 +149,10 @@ class TestRunner
             cPayload = ""
             bInPayload = false
 
-            cOutputClean = substr(cOutput, char(13), "")
-            aOutLines = str2list(cOutputClean)
+            aOutLines = str2list(cOutput)
 
             for cLine in aOutLines
-                cTrim = trim(cLine)
+                cTrim = cleanLine(cLine)
                 if cTrim = "___RINGTEST_RESULTS_START___"
                     bInPayload = true
                     loop
@@ -159,32 +162,43 @@ class TestRunner
                 ok
 
                 if bInPayload
-                    cPayload += cLine + nl
+                    cPayload += cTrim + nl
                 else
                     cCleanOutput += cLine + nl
                 ok
             next
 
-            bFileHasSuites = false
-            if cPayload != ""
+            # Retrieve parsed suites from result file or stdout payload
+            aNewSuites = []
+            if fexists(cTempResFile)
+                aNewSuites = loadResultsPayload(cTempResFile)
+                try
+                    remove(cTempResFile)
+                catch
+                done
+            ok
+
+            if len(aNewSuites) = 0 and cPayload != ""
                 aNewSuites = parseResultsPayload(cPayload)
-                if len(aNewSuites) > 0
-                    bFileHasSuites = true
-                    for s in aNewSuites
-                        add(aAllSuites, s)
-                        nSuitesTotal++
-                        if s.nFailCount = 0 and len(s.aTests) > 0
-                            nSuitesPassed++
+            ok
+
+            bFileHasSuites = false
+            if len(aNewSuites) > 0
+                bFileHasSuites = true
+                for s in aNewSuites
+                    add(aAllSuites, s)
+                    nSuitesTotal++
+                    if s.nFailCount = 0 and len(s.aTests) > 0
+                        nSuitesPassed++
+                    ok
+                    for t in s.aTests
+                        if t.bPassed
+                            nTotalPassed++
+                        else
+                            nTotalFailed++
                         ok
-                        for t in s.aTests
-                            if t.bPassed
-                                nTotalPassed++
-                            else
-                                nTotalFailed++
-                            ok
-                        next
                     next
-                ok
+                next
             ok
 
             if !bFileHasSuites
@@ -210,15 +224,98 @@ class TestRunner
             return runFileDirect(cFilePath, cProjectDir)
         ok
 
+    func saveResultsPayload cFilePath
+        cScript = "return [" + nl
+        for sIdx = 1 to len(aGlobalTestSuites)
+            cScript += "  [" + '"' + escapeRingString(aGlobalTestSuites[sIdx].cName) + '", ' +
+                       string(aGlobalTestSuites[sIdx].nPassCount) + ", " +
+                       string(aGlobalTestSuites[sIdx].nFailCount) + ", " +
+                       string(aGlobalTestSuites[sIdx].nTotalDuration) + ", [" + nl
+            for tIdx = 1 to len(aGlobalTestSuites[sIdx].aTests)
+                oTest = aGlobalTestSuites[sIdx].aTests[tIdx]
+                cPassFlag = "0"
+                if oTest.bPassed cPassFlag = "1" ok
+                cScript += "    [" + '"' + escapeRingString(oTest.cName) + '", ' +
+                           cPassFlag + ", " +
+                           string(oTest.nDuration) + ', "' +
+                           escapeRingString(oTest.cErrorMessage) + '"]'
+                if tIdx < len(aGlobalTestSuites[sIdx].aTests) cScript += "," ok
+                cScript += nl
+            next
+            cScript += "  ]]"
+            if sIdx < len(aGlobalTestSuites) cScript += "," ok
+            cScript += nl
+        next
+        cScript += "]" + nl
+        writeFileContent(cFilePath, cScript)
+
+    func loadResultsPayload cFilePath
+        if !fexists(cFilePath)
+            return []
+        ok
+        cCode = read(cFilePath)
+        if cCode = "" or cCode = NULL
+            return []
+        ok
+        aWorkerResults = []
+        try
+            aWorkerResults = eval(cCode)
+        catch
+            return []
+        done
+        if !isList(aWorkerResults)
+            return []
+        ok
+
+        aParsedSuites = []
+        for sIdx = 1 to len(aWorkerResults)
+            aSuiteItem = aWorkerResults[sIdx]
+            oSuite = new TestSuite(aSuiteItem[1])
+            oSuite.nPassCount = aSuiteItem[2]
+            oSuite.nFailCount = aSuiteItem[3]
+            oSuite.nTotalDuration = aSuiteItem[4]
+            aTestsList = aSuiteItem[5]
+            for tIdx = 1 to len(aTestsList)
+                aTestItem = aTestsList[tIdx]
+                oTest = new TestCase(aTestItem[1], NULL)
+                oTest.bPassed = (aTestItem[2] = 1 or aTestItem[2] = "1" or aTestItem[2] = true)
+                oTest.nDuration = aTestItem[3]
+                oTest.cErrorMessage = aTestItem[4]
+                add(oSuite.aTests, oTest)
+            next
+            add(aParsedSuites, oSuite)
+        next
+        return aParsedSuites
+
+    func escapeRingString cStr
+        cRes = ""
+        for i = 1 to len(cStr)
+            nCh = ascii(cStr[i])
+            if nCh = 34
+                cRes += '\"'
+            but nCh = 92
+                cRes += '\\'
+            but nCh = 10
+                cRes += '\n'
+            but nCh = 13
+                # ignore CR
+            but nCh = 9
+                cRes += '\t'
+            else
+                cRes += cStr[i]
+            ok
+        next
+        return cRes
+
     func printResultsPayload
-        aSuites = getGlobalSuites()
-        for oSuite in aSuites
+        for sIdx = 1 to len(aGlobalTestSuites)
             ? "[SUITE]"
-            ? "name=" + oSuite.cName
-            ? "passed=" + string(oSuite.nPassCount)
-            ? "failed=" + string(oSuite.nFailCount)
-            ? "duration=" + string(oSuite.nTotalDuration)
-            for oTest in oSuite.aTests
+            ? "name=" + aGlobalTestSuites[sIdx].cName
+            ? "passed=" + string(aGlobalTestSuites[sIdx].nPassCount)
+            ? "failed=" + string(aGlobalTestSuites[sIdx].nFailCount)
+            ? "duration=" + string(aGlobalTestSuites[sIdx].nTotalDuration)
+            for tIdx = 1 to len(aGlobalTestSuites[sIdx].aTests)
+                oTest = aGlobalTestSuites[sIdx].aTests[tIdx]
                 cErrMsg = oTest.cErrorMessage
                 if cErrMsg != ""
                     cErrMsg = substr(cErrMsg, nl, " -- ")
@@ -237,59 +334,123 @@ class TestRunner
         next
 
     func parseResultsPayload cPayload
-        cPayload = substr(cPayload, char(13), "")
         aLines = str2list(cPayload)
         aParsedSuites = []
-        oCurrentSuite = NULL
-        oCurTest = NULL
+        
+        cCurSuiteName = ""
+        nCurSuitePass = 0
+        nCurSuiteFail = 0
+        nCurSuiteDur = 0.0
+        aCurSuiteTests = []
+
+        cCurTestName = ""
+        bCurTestPassed = false
+        nCurTestDur = 0.0
+        cCurTestErr = ""
+        bInTest = false
+        bInSuite = false
+
         for cLine in aLines
-            cLine = trim(cLine)
+            cLine = cleanLine(cLine)
             if cLine = ""
                 loop
             ok
-            if left(cLine, 7) = "[SUITE]"
-                oCurrentSuite = new TestSuite("")
-                add(aParsedSuites, oCurrentSuite)
-                oCurTest = NULL
-            but left(cLine, 6) = "[TEST]"
-                oCurTest = new TestCase("", NULL)
-                if oCurrentSuite != NULL
-                    add(oCurrentSuite.aTests, oCurTest)
+            if cLine = "[SUITE]"
+                if bInTest
+                    oTest = new TestCase(cCurTestName, NULL)
+                    oTest.bPassed = bCurTestPassed
+                    oTest.nDuration = nCurTestDur
+                    oTest.cErrorMessage = cCurTestErr
+                    add(aCurSuiteTests, oTest)
+                    bInTest = false
                 ok
+                if bInSuite
+                    oSuite = new TestSuite(cCurSuiteName)
+                    oSuite.nPassCount = nCurSuitePass
+                    oSuite.nFailCount = nCurSuiteFail
+                    oSuite.nTotalDuration = nCurSuiteDur
+                    oSuite.aTests = aCurSuiteTests
+                    add(aParsedSuites, oSuite)
+                ok
+                cCurSuiteName = ""
+                nCurSuitePass = 0
+                nCurSuiteFail = 0
+                nCurSuiteDur = 0.0
+                aCurSuiteTests = []
+                bInSuite = true
+            but cLine = "[TEST]"
+                if bInTest
+                    oTest = new TestCase(cCurTestName, NULL)
+                    oTest.bPassed = bCurTestPassed
+                    oTest.nDuration = nCurTestDur
+                    oTest.cErrorMessage = cCurTestErr
+                    add(aCurSuiteTests, oTest)
+                ok
+                cCurTestName = ""
+                bCurTestPassed = false
+                nCurTestDur = 0.0
+                cCurTestErr = ""
+                bInTest = true
             but left(cLine, 5) = "name="
-                cVal = strFrom(cLine, 6)
-                if oCurTest != NULL
-                    oCurTest.cName = cVal
-                but oCurrentSuite != NULL
-                    oCurrentSuite.cName = cVal
+                cVal = cleanLine(substr(cLine, 6, len(cLine) - 5))
+                if bInTest
+                    cCurTestName = cVal
+                else
+                    cCurSuiteName = cVal
                 ok
             but left(cLine, 7) = "passed="
-                cVal = strFrom(cLine, 8)
-                if oCurTest != NULL
-                    oCurTest.bPassed = (cVal = "1" or cVal = "true")
-                but oCurrentSuite != NULL
-                    oCurrentSuite.nPassCount = number(cVal)
+                cVal = cleanLine(substr(cLine, 8, len(cLine) - 7))
+                if bInTest
+                    bCurTestPassed = (cVal = "1" or cVal = "true")
+                else
+                    nCurSuitePass = number(cVal)
                 ok
             but left(cLine, 7) = "failed="
-                cVal = strFrom(cLine, 8)
-                if oCurrentSuite != NULL
-                    oCurrentSuite.nFailCount = number(cVal)
-                ok
+                cVal = cleanLine(substr(cLine, 8, len(cLine) - 7))
+                nCurSuiteFail = number(cVal)
             but left(cLine, 9) = "duration="
-                cVal = strFrom(cLine, 10)
-                if oCurTest != NULL
-                    oCurTest.nDuration = number(cVal)
-                but oCurrentSuite != NULL
-                    oCurrentSuite.nTotalDuration = number(cVal)
+                cVal = cleanLine(substr(cLine, 10, len(cLine) - 9))
+                if bInTest
+                    nCurTestDur = number(cVal)
+                else
+                    nCurSuiteDur = number(cVal)
                 ok
             but left(cLine, 6) = "error="
-                cVal = strFrom(cLine, 7)
-                if oCurTest != NULL
-                    oCurTest.cErrorMessage = cVal
+                cVal = cleanLine(substr(cLine, 7, len(cLine) - 6))
+                if bInTest
+                    cCurTestErr = cVal
                 ok
             ok
         next
+
+        if bInTest
+            oTest = new TestCase(cCurTestName, NULL)
+            oTest.bPassed = bCurTestPassed
+            oTest.nDuration = nCurTestDur
+            oTest.cErrorMessage = cCurTestErr
+            add(aCurSuiteTests, oTest)
+        ok
+        if bInSuite
+            oSuite = new TestSuite(cCurSuiteName)
+            oSuite.nPassCount = nCurSuitePass
+            oSuite.nFailCount = nCurSuiteFail
+            oSuite.nTotalDuration = nCurSuiteDur
+            oSuite.aTests = aCurSuiteTests
+            add(aParsedSuites, oSuite)
+        ok
+
         return aParsedSuites
+
+    func cleanLine cStr
+        cTrim = trim(cStr)
+        while len(cTrim) > 0
+            if right(cTrim, 1) = char(13) or right(cTrim, 1) = char(10)
+                cTrim = left(cTrim, len(cTrim) - 1)
+            else
+                exit
+            ok
+        end
+        return trim(cTrim)
 
     func strFrom cStr, nStart
         nLen = len(cStr)
@@ -356,28 +517,26 @@ class TestRunner
         nTotalPassed = 0
         nTotalFailed = 0
 
-        aSuites = getGlobalSuites()
-
         # Run Global beforeAll hooks
         aGlobalBAll = getGlobalBeforeAll()
         for vHook in aGlobalBAll
             safeCall(vHook, NULL)
         next
 
-        for oSuite in aSuites
+        for sIdx = 1 to len(aGlobalTestSuites)
             nSuitesTotal++
             bSuiteSuccess = true
-            oReporter.printSuiteHeader(oSuite.cName)
+            oReporter.printSuiteHeader(aGlobalTestSuites[sIdx].cName)
 
             nSuiteStart = clock()
 
             # Run Suite beforeAll hooks
-            for vHook in oSuite.aBeforeAll
-                safeCall(vHook, oSuite)
+            for vHook in aGlobalTestSuites[sIdx].aBeforeAll
+                safeCall(vHook, aGlobalTestSuites[sIdx])
             next
 
-            for oTest in oSuite.aTests
-                if cFilter != "" and !substr(oTest.cName, cFilter)
+            for tIdx = 1 to len(aGlobalTestSuites[sIdx].aTests)
+                if cFilter != "" and !substr(aGlobalTestSuites[sIdx].aTests[tIdx].cName, cFilter)
                     loop
                 ok
 
@@ -386,52 +545,52 @@ class TestRunner
                 # Run Global beforeEach hooks
                 aGlobalBEach = getGlobalBeforeEach()
                 for vHook in aGlobalBEach
-                    safeCall(vHook, oTest)
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run Suite beforeEach hooks
-                for vHook in oSuite.aBeforeEach
-                    safeCall(vHook, oTest)
+                for vHook in aGlobalTestSuites[sIdx].aBeforeEach
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run test body safely
                 try
-                    if !isNull(oTest.vCallback)
-                        safeCall(oTest.vCallback, oTest)
+                    if !isNull(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback)
+                        safeCall(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
-                    oTest.bPassed = true
-                    oTest.nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
                     nTotalPassed++
-                    oSuite.nPassCount++
-                    oReporter.printTestPass(oTest)
+                    aGlobalTestSuites[sIdx].nPassCount++
+                    oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                 catch
-                    oTest.bPassed = false
-                    oTest.cErrorMessage = cCatchError
-                    oTest.nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
+                    aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
                     nTotalFailed++
-                    oSuite.nFailCount++
+                    aGlobalTestSuites[sIdx].nFailCount++
                     bSuiteSuccess = false
-                    oReporter.printTestFail(oTest)
+                    oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
                 done
 
                 # Run Suite afterEach hooks
-                for vHook in oSuite.aAfterEach
-                    safeCall(vHook, oTest)
+                for vHook in aGlobalTestSuites[sIdx].aAfterEach
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run Global afterEach hooks
                 aGlobalAEach = getGlobalAfterEach()
                 for vHook in aGlobalAEach
-                    safeCall(vHook, oTest)
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
             next
 
             # Run Suite afterAll hooks
-            for vHook in oSuite.aAfterAll
-                safeCall(vHook, oSuite)
+            for vHook in aGlobalTestSuites[sIdx].aAfterAll
+                safeCall(vHook, aGlobalTestSuites[sIdx])
             next
 
-            oSuite.nTotalDuration = (clock() - nSuiteStart) / clockspersecond()
+            aGlobalTestSuites[sIdx].nTotalDuration = (clock() - nSuiteStart) / clockspersecond()
 
             if bSuiteSuccess
                 nSuitesPassed++
@@ -518,29 +677,26 @@ class TestRunner
             return false
         done
 
-        aSuites = getGlobalSuites()
-
         # Run Global beforeAll hooks
         aGlobalBAll = getGlobalBeforeAll()
         for vHook in aGlobalBAll
             safeCall(vHook, NULL)
         next
 
-        for oSuite in aSuites
-            add(aAllSuites, oSuite)
+        for sIdx = 1 to len(aGlobalTestSuites)
             nSuitesTotal++
             bSuiteSuccess = true
-            oReporter.printSuiteHeader(oSuite.cName)
+            oReporter.printSuiteHeader(aGlobalTestSuites[sIdx].cName)
 
             nSuiteStart = clock()
 
             # Run Suite beforeAll hooks
-            for vHook in oSuite.aBeforeAll
-                safeCall(vHook, oSuite)
+            for vHook in aGlobalTestSuites[sIdx].aBeforeAll
+                safeCall(vHook, aGlobalTestSuites[sIdx])
             next
 
-            for oTest in oSuite.aTests
-                if cFilter != "" and !substr(oTest.cName, cFilter)
+            for tIdx = 1 to len(aGlobalTestSuites[sIdx].aTests)
+                if cFilter != "" and !substr(aGlobalTestSuites[sIdx].aTests[tIdx].cName, cFilter)
                     loop
                 ok
 
@@ -549,56 +705,57 @@ class TestRunner
                 # Run Global beforeEach hooks
                 aGlobalBEach = getGlobalBeforeEach()
                 for vHook in aGlobalBEach
-                    safeCall(vHook, oTest)
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run Suite beforeEach hooks
-                for vHook in oSuite.aBeforeEach
-                    safeCall(vHook, oTest)
+                for vHook in aGlobalTestSuites[sIdx].aBeforeEach
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run test body safely
                 try
-                    if !isNull(oTest.vCallback)
-                        safeCall(oTest.vCallback, oTest)
+                    if !isNull(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback)
+                        safeCall(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
-                    oTest.bPassed = true
-                    oTest.nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
                     nTotalPassed++
-                    oSuite.nPassCount++
-                    oReporter.printTestPass(oTest)
+                    aGlobalTestSuites[sIdx].nPassCount++
+                    oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                 catch
-                    oTest.bPassed = false
-                    oTest.cErrorMessage = cCatchError
-                    oTest.nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
+                    aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
                     nTotalFailed++
-                    oSuite.nFailCount++
+                    aGlobalTestSuites[sIdx].nFailCount++
                     bSuiteSuccess = false
-                    oReporter.printTestFail(oTest)
+                    oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
                 done
 
                 # Run Suite afterEach hooks
-                for vHook in oSuite.aAfterEach
-                    safeCall(vHook, oTest)
+                for vHook in aGlobalTestSuites[sIdx].aAfterEach
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
 
                 # Run Global afterEach hooks
                 aGlobalAEach = getGlobalAfterEach()
                 for vHook in aGlobalAEach
-                    safeCall(vHook, oTest)
+                    safeCall(vHook, aGlobalTestSuites[sIdx].aTests[tIdx])
                 next
             next
 
             # Run Suite afterAll hooks
-            for vHook in oSuite.aAfterAll
-                safeCall(vHook, oSuite)
+            for vHook in aGlobalTestSuites[sIdx].aAfterAll
+                safeCall(vHook, aGlobalTestSuites[sIdx])
             next
 
-            oSuite.nTotalDuration = (clock() - nSuiteStart) / clockspersecond()
+            aGlobalTestSuites[sIdx].nTotalDuration = (clock() - nSuiteStart) / clockspersecond()
 
             if bSuiteSuccess
                 nSuitesPassed++
             ok
+            add(aAllSuites, aGlobalTestSuites[sIdx])
             ? ""
         next
 
@@ -766,7 +923,22 @@ class TestRunner
         done
 
     func scanDirectory cPath, aOutList
-        aEntries = dir(cPath)
+        if cPath = "" or cPath = NULL
+            cPath = "."
+        ok
+        cPath = substr(cPath, char(92), "/")
+
+        aEntries = []
+        try
+            aEntries = dir(cPath)
+        catch
+            return
+        done
+
+        if !isList(aEntries)
+            return
+        ok
+
         for entry in aEntries
             cName = entry[1]
             bIsDir = entry[2]
@@ -775,7 +947,11 @@ class TestRunner
                 loop
             ok
 
-            cFullPath = cPath + "/" + cName
+            cFullPath = cPath
+            if right(cFullPath, 1) != "/"
+                cFullPath += "/"
+            ok
+            cFullPath += cName
             cFullPath = substr(cFullPath, char(92), "/")
 
             if bIsDir

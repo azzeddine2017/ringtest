@@ -1,19 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="RingTest" tests="0" failures="0" errors="0" time="1.44">
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+<testsuites name="RingTest" tests="36" failures="2" errors="0" time="4.68">
+  <testsuite name="Context Suite" tests="5" failures="0" errors="0" time="0.01">
+    <testcase name="stores and reads back a string" classname="Context Suite" time="0"/>
+    <testcase name="keeps values across tests" classname="Context Suite" time="0"/>
+    <testcase name="overwrites an existing key" classname="Context Suite" time="0"/>
+    <testcase name="increments a counter numerically" classname="Context Suite" time="0"/>
+    <testcase name="adds an arbitrary step" classname="Context Suite" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Diagnostic &amp; Rich Error Reporting Demo" tests="3" failures="2" errors="0" time="0.01">
+    <testcase name="should show clean diff comparison on mismatch" classname="Diagnostic &amp; Rich Error Reporting Demo" time="0">
+      <failure message="AssertionError: Expected [Ring 2.0] but received [Ring 1.22]" type="AssertionError">AssertionError: Expected [Ring 2.0] but received [Ring 1.22]</failure>
+    </testcase>
+    <testcase name="should trigger R19 diagnostic tip on less parameters" classname="Diagnostic &amp; Rich Error Reporting Demo" time="0"/>
+    <testcase name="should trigger R24 diagnostic tip on uninitialized variable" classname="Diagnostic &amp; Rich Error Reporting Demo" time="0">
+      <failure message="Error (R24) : Using uninitialized variable: uninitialized_demo_var" type="AssertionError">Error (R24) : Using uninitialized variable: uninitialized_demo_var</failure>
+    </testcase>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Exception Handling Suite" tests="3" failures="0" errors="0" time="0">
+    <testcase name="should detect division by zero exception" classname="Exception Handling Suite" time="0"/>
+    <testcase name="should detect custom raised errors" classname="Exception Handling Suite" time="0"/>
+    <testcase name="should detect syntax errors in eval" classname="Exception Handling Suite" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Hooks Suite - Lifecycle Hooks" tests="3" failures="0" errors="0" time="0">
+    <testcase name="should execute beforeAll exactly once before any test" classname="Hooks Suite - Lifecycle Hooks" time="0"/>
+    <testcase name="should execute beforeEach on subsequent tests" classname="Hooks Suite - Lifecycle Hooks" time="0"/>
+    <testcase name="should have accumulated afterEach calls after third test" classname="Hooks Suite - Lifecycle Hooks" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Math Operations Suite" tests="4" failures="0" errors="0" time="0">
+    <testcase name="should calculate addition and subtraction correctly" classname="Math Operations Suite" time="0"/>
+    <testcase name="should handle multiplication and division" classname="Math Operations Suite" time="0"/>
+    <testcase name="should validate numerical boundaries" classname="Math Operations Suite" time="0"/>
+    <testcase name="should verify toBeBetween with math operations" classname="Math Operations Suite" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Mock Suite" tests="5" failures="0" errors="0" time="0">
+    <testcase name="registers a mock and reports it as called" classname="Mock Suite" time="0"/>
+    <testcase name="counts calls" classname="Mock Suite" time="0"/>
+    <testcase name="returns the registered mock by name" classname="Mock Suite" time="0"/>
+    <testcase name="restores a single mock" classname="Mock Suite" time="0"/>
+    <testcase name="restores all mocks" classname="Mock Suite" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="Basic Assertions Suite" tests="8" failures="0" errors="0" time="0">
+    <testcase name="should verify strict equality and comparisons" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should check boolean truthiness and falsiness" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify lists and deep equality" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify string substring matching" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify toBeBetween assertion" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify toMatch assertion" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify toBeEmpty assertion" classname="Basic Assertions Suite" time="0"/>
+    <testcase name="should verify toHaveLength assertion" classname="Basic Assertions Suite" time="0"/>
   </testsuite>
-  <testsuite name="" tests="0" failures="0" errors="0" time="0">
+  <testsuite name="String Utilities Suite" tests="5" failures="0" errors="0" time="0">
+    <testcase name="should concatenate strings correctly" classname="String Utilities Suite" time="0"/>
+    <testcase name="should verify string length and content" classname="String Utilities Suite" time="0"/>
+    <testcase name="should verify truthiness for empty and non-empty strings" classname="String Utilities Suite" time="0"/>
+    <testcase name="should verify toMatch with string patterns" classname="String Utilities Suite" time="0"/>
+    <testcase name="should verify toHaveLength with strings" classname="String Utilities Suite" time="0"/>
   </testsuite>
 </testsuites>

@@ -62,31 +62,42 @@ func main
     ok
 
 func showHelp
-    ? "=========================================================="
-    ? "  ringtest - The Modern Test Runner for Ring Language     "
-    ? "=========================================================="
-    ? "Usage:"
+    cBold  = char(27) + "[1m"
+    cCyan  = char(27) + "[36m"
+    cGreen = char(27) + "[32m"
+    cGray  = char(27) + "[90m"
+    cReset = char(27) + "[0m"
+
+    ? cCyan + cBold + "==========================================================" + cReset
+    ? cCyan + cBold + "  ringtest - The Modern Test Runner for Ring Language     " + cReset
+    ? cCyan + cBold + "==========================================================" + cReset
+    ? ""
+    ? cBold + "Usage:" + cReset
     ? "  ringtest [options] [target_path]"
     ? ""
-    ? "Options:"
-    ? "  -h, --help           Show this help documentation"
-    ? "  -v, --version        Display the current ringtest version"
-    ? "  --filter=<text>      Filter executed tests by description"
-    ? "  -w, --watch          Watch mode: re-run tests on file changes"
-    ? "  -j, --json           Output results in JSON format"
-    ? "  --html[=<path>]      Generate modern interactive HTML dashboard"
-    ? "  --junit[=<path>]     Generate JUnit XML report for CI/CD"
-    ? "  --xml[=<path>]       Alias for --junit"
+    ? cBold + "Options:" + cReset
+    ? "  " + cGreen + "-h, --help" + cReset + "              Show this help documentation"
+    ? "  " + cGreen + "-v, --version" + cReset + "           Display the current ringtest version"
+    ? "  " + cGreen + "--filter=<text>" + cReset + "         Filter executed tests by description"
+    ? "  " + cGreen + "-w, --watch" + cReset + "             Watch mode: re-run tests on file changes"
+    ? "  " + cGreen + "-j, --json" + cReset + "              Output results in machine-readable JSON format"
+    ? "  " + cGreen + "--html[=<path>]" + cReset + "         Generate modern interactive HTML dashboard"
+    ? "  " + cGreen + "--junit[=<path>]" + cReset + "        Generate standard JUnit XML report for CI/CD"
+    ? "  " + cGreen + "--xml[=<path>]" + cReset + "          Alias for --junit"
     ? ""
-    ? "Lifecycle Hooks:"
-    ? "  beforeAll(func), beforeEach(func), afterEach(func), afterAll(func)"
+    ? cBold + "Lifecycle Hooks:" + cReset
+    ? "  " + cGray + "Suite Scope:" + cReset + "   beforeAll(func), beforeEach(func), afterEach(func), afterAll(func)"
+    ? "  " + cGray + "Global Scope:" + cReset + "  beforeAll(func), beforeEach(func), afterEach(func), afterAll(func)"
     ? ""
-    ? "Examples:"
-    ? "  ringtest                        # Discover and run all tests"
-    ? "  ringtest tests/                 # Run all tests in 'tests/' folder"
-    ? "  ringtest tests/sample_test.ring # Run specific test file"
-    ? "  ringtest --filter=math          # Run only tests matching 'math'"
-    ? "  ringtest --watch                # Watch mode"
-    ? "  ringtest --html                 # Generate 'test-report.html'"
-    ? "  ringtest --junit=report.xml     # Generate JUnit XML report"
-    ? "=========================================================="
+    ? cBold + "Examples:" + cReset
+    ? "  ringtest                           " + cGray + "# Discover and run all tests in ./tests" + cReset
+    ? "  ringtest tests/                    " + cGray + "# Run all tests in 'tests/' folder" + cReset
+    ? "  ringtest tests/sample_test.ring    " + cGray + "# Run a specific test file" + cReset
+    ? "  ringtest --filter=math             " + cGray + "# Run only tests matching 'math'" + cReset
+    ? "  ringtest --watch                   " + cGray + "# Watch mode: auto re-run on changes" + cReset
+    ? "  ringtest --html                    " + cGray + "# Generate 'reports/test-report.html'" + cReset
+    ? "  ringtest --junit                   " + cGray + "# Generate 'reports/test-report.xml'" + cReset
+    ? "  ringtest --html --junit            " + cGray + "# Generate both HTML & JUnit XML reports" + cReset
+    ? "  ringtest --html=custom/report.html " + cGray + "# Generate HTML report at custom path" + cReset
+    ? ""
+    ? cCyan + "==========================================================" + cReset

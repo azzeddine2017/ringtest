@@ -16,6 +16,13 @@ class ArgsParser
     cJunitReportPath = ""
 
     func parse aArgs
+        if cCallerDir != NULL and cCallerDir != ""
+            cTargetDirectory = cCallerDir
+        else
+            cTargetDirectory = "."
+        ok
+        cTargetDirectory = substr(cTargetDirectory, char(92), "/")
+
         nLen = len(aArgs)
         if nLen = 0
             return self
@@ -31,44 +38,52 @@ class ArgsParser
         next
 
         if nStartIndex > nLen
-            # No custom arguments provided, use caller directory if available
-            if cCallerDir != NULL and cCallerDir != ""
-                cTargetDirectory = cCallerDir
-            ok
             return self
         ok
 
         for i = nStartIndex to nLen
             cArg = aArgs[i]
+            cLower = lower(cArg)
 
-            if cArg = "-h" or cArg = "--help" or cArg = "help"
+            if cLower = "-h" or cLower = "--help" or cLower = "-help" or cLower = "help"
                 bShowHelp = true
                 return self
-            but cArg = "-v" or cArg = "--version" or cArg = "version"
+            but cLower = "-v" or cLower = "--version" or cLower = "-version" or cLower = "version"
                 bShowVersion = true
                 return self
-            but left(cArg, 9) = "--filter="
+            but left(cLower, 9) = "--filter="
                 cFilter = substr(cArg, 10, len(cArg) - 9)
-            but cArg = "--watch" or cArg = "-w"
+            but left(cLower, 8) = "-filter="
+                cFilter = substr(cArg, 9, len(cArg) - 8)
+            but cLower = "--watch" or cLower = "-watch" or cLower = "-w"
                 bWatchMode = true
-            but cArg = "--json" or cArg = "-j"
+            but cLower = "--json" or cLower = "-json" or cLower = "-j"
                 bJsonOutput = true
-            but cArg = "--html"
+            but cLower = "--html" or cLower = "-html"
                 bHtmlReport = true
                 cHtmlReportPath = "reports/test-report.html"
-            but left(cArg, 7) = "--html="
+            but left(cLower, 7) = "--html="
                 bHtmlReport = true
                 cHtmlReportPath = substr(cArg, 8, len(cArg) - 7)
-            but cArg = "--junit" or cArg = "--xml"
+            but left(cLower, 6) = "-html="
+                bHtmlReport = true
+                cHtmlReportPath = substr(cArg, 7, len(cArg) - 6)
+            but cLower = "--junit" or cLower = "-junit" or cLower = "--xml" or cLower = "-xml"
                 bJunitReport = true
                 cJunitReportPath = "reports/test-report.xml"
-            but left(cArg, 8) = "--junit="
+            but left(cLower, 8) = "--junit="
                 bJunitReport = true
                 cJunitReportPath = substr(cArg, 9, len(cArg) - 8)
-            but left(cArg, 6) = "--xml="
+            but left(cLower, 7) = "-junit="
+                bJunitReport = true
+                cJunitReportPath = substr(cArg, 8, len(cArg) - 7)
+            but left(cLower, 6) = "--xml="
                 bJunitReport = true
                 cJunitReportPath = substr(cArg, 7, len(cArg) - 6)
-            but left(cArg, 2) != "-"
+            but left(cLower, 5) = "-xml="
+                bJunitReport = true
+                cJunitReportPath = substr(cArg, 6, len(cArg) - 5)
+            but left(cArg, 1) != "-"
                 # Target path or file passed - resolve against caller dir
                 cResolved = cArg
                 if cCallerDir != NULL and cCallerDir != "" and left(cArg, 1) != "/" and substr(cArg, ":") = 0
