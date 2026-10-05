@@ -429,7 +429,7 @@ class TestReporter
         cXml += '</testsuites>' + nl
 
         writeFileContent(cFilePath, cXml)
-        ? cGreen + "✔ JUnit XML Report generated: " + cReset + cGray + cFilePath + cReset
+        ? cGreen + " -JUnit XML Report generated: " + cReset + cGray + cFilePath + cReset
 
     private
 
