@@ -15,6 +15,77 @@ func benchmarkCompare cName1, vFunc1, cName2, vFunc2, nIterations
     ok
     return $oGlobalBenchmark.compare(cName1, vFunc1, cName2, vFunc2, nIterations)
 
+func chronos
+    return new TestTimer
+
+func testTimer
+    return new TestTimer
+
+# ======================================================================
+# TestTimer: High-Precision Timekeeper (Auto-uses QalamChronos if loaded)
+# ======================================================================
+class TestTimer
+    pChronos = NULL
+    nStart = 0
+    bHasQalam = false
+
+    func init
+        try
+            pChronos = new QalamChronos()
+            bHasQalam = true
+        catch
+            bHasQalam = false
+            nStart = clock()
+        done
+        return self
+
+    func reset
+        if bHasQalam
+            pChronos.reset()
+        else
+            nStart = clock()
+        ok
+
+    func elapsed_ns
+        if bHasQalam
+            return pChronos.elapsed_ns()
+        ok
+        return ((clock() - nStart) / clockspersecond()) * 1000000000
+
+    func elapsed_ms
+        if bHasQalam
+            return pChronos.elapsed_ns() / 1000000.0
+        ok
+        return ((clock() - nStart) / clockspersecond()) * 1000.0
+
+    func elapsed_s
+        if bHasQalam
+            return pChronos.elapsed_ns() / 1000000000.0
+        ok
+        return (clock() - nStart) / clockspersecond()
+
+    func elapsed
+        if bHasQalam
+            return pChronos.elapsed()
+        ok
+        return formatTime(elapsed_s())
+
+    private
+
+    func formatTime nSec
+        if nSec < 0.000001
+            return string(floor(nSec * 1000000000)) + " ns"
+        but nSec < 0.001
+            return string(floor(nSec * 1000000)) + " µs"
+        but nSec < 1.0
+            return string(floor(nSec * 10000) / 10) + " ms"
+        else
+            return string(floor(nSec * 100) / 100) + " s"
+        ok
+
+# ======================================================================
+# BenchmarkRunner: Automated Iteration Benchmark & Comparison Engine
+# ======================================================================
 class BenchmarkRunner
     aResults = []
 
@@ -23,19 +94,20 @@ class BenchmarkRunner
             nIterations = 1000
         ok
 
+        oTimer = new TestTimer
+
         # Warm-up run (up to 10 iterations)
         nWarmup = min(nIterations, 10)
         for w = 1 to nWarmup
             safeCall(vFunc)
         next
 
-        nStart = clock()
+        oTimer.reset()
         for i = 1 to nIterations
             safeCall(vFunc)
         next
-        nEnd = clock()
+        nTotal = oTimer.elapsed_s()
 
-        nTotal = (nEnd - nStart) / clockspersecond()
         if nTotal <= 0
             nTotal = 0.000001
         ok
@@ -47,7 +119,8 @@ class BenchmarkRunner
             :iterations = nIterations,
             :totalTime = nTotal,
             :avgTime = nAvg,
-            :opsPerSec = nOps
+            :opsPerSec = nOps,
+            :hasQalam = oTimer.bHasQalam
         ]
         add(aResults, aResult)
 
@@ -59,8 +132,13 @@ class BenchmarkRunner
         cBold   = char(27) + "[1m"
         cReset  = char(27) + "[0m"
 
+        cEngine = ""
+        if oTimer.bHasQalam
+            cEngine = cGreen + " (⚡ AlQalam Chronos)" + cReset
+        ok
+
         ? cCyan + cBold + "  ⚡ BENCHMARK: " + cReset + cBold + cName + cReset +
-          cGray + " (" + string(nIterations) + " iterations)" + cReset
+          cGray + " (" + string(nIterations) + " iterations)" + cReset + cEngine
         ? "     " + cGray + "Total: " + cReset + formatTime(nTotal) +
           "  " + cGray + "Avg: " + cReset + formatTime(nAvg) +
           "  " + cGreen + cBold + string(nOps) + " ops/sec" + cReset

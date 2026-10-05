@@ -169,13 +169,24 @@ describe("Feature Workflows", func {
 
 ---
 
-## Performance Benchmarking
+## Performance Benchmarking & High-Precision Chronos
 
-Measure performance and compare function throughput directly in your test suites:
+Measure performance, track elapsed time with nanosecond accuracy, and compare function throughput directly in your test suites. When **AlQalam** (`QalamChronos`) is present in your project, `ringtest` automatically activates C++ hardware nanosecond timekeeping:
 
 ```ring
-describe("Performance Benchmark", func {
+describe("Performance Benchmark & High-Precision Timing", func {
 
+    # 1. High-Precision Timer (Auto-detects QalamChronos if available)
+    it("measures execution with chronos timer", func {
+        timer = chronos()   # or new TestTimer
+        timer.reset()
+
+        # Run code...
+        see "Elapsed: " + timer.elapsed() + nl         # e.g., "15.4 µs" or "1.2 ms"
+        see "Nanoseconds: " + timer.elapsed_ns() + nl # e.g., 15400
+    })
+
+    # 2. Automated Throughput Measurement
     it("measures execution throughput", func {
         res = benchmark("String Concatenation", 1000, func {
             s = ""
@@ -186,6 +197,7 @@ describe("Performance Benchmark", func {
         expect(res[:opsPerSec]).toBeGreaterThan(1000)
     })
 
+    # 3. Side-by-Side Comparison & Speedup Factor
     it("compares two implementations side-by-side", func {
         benchmarkCompare(
             "List Add", func { a = [] add(a, 1) },

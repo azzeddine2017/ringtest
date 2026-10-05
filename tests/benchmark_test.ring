@@ -15,12 +15,15 @@ describe("Benchmark Integration Suite", func {
         expect(res[:opsPerSec]).toBeGreaterThan(0)
     })
 
-    it("compares two functions performance", func {
-        benchmarkCompare(
-            "List Add", func { a = [] add(a, 1) },
-            "List Concatenation", func { a = [] a + 1 },
-            100
-        )
-        expect(true).toBeTruthy()
+    it("measures time with chronos / TestTimer API", func {
+        t = chronos()
+        t.reset()
+        sum = 0
+        for i = 1 to 1000
+            sum += i
+        next
+        expect(t.elapsed_ns()).toBeGreaterThan(0)
+        expect(t.elapsed_ms()).toBeGreaterThanOrEqual(0)
+        expect(len(t.elapsed())).toBeGreaterThan(0)
     })
 })
