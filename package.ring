@@ -25,6 +25,11 @@ aPackageInfo = [
 			:name = "ringsubprocess",
 			:version = "1.0.5",
 			:providerusername = "Azzeddine2017"
+		],
+		[
+			:name = "AlQalam",
+			:version = "1.0.2",
+			:providerusername = "Azzeddine2017"
 		]
 	],
 	:files = [
