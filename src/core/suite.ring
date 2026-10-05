@@ -117,37 +117,56 @@ func it cTestName, vTestFunc
     oTest = new TestCase(cTestName, vTestFunc)
     nLastIndex = len(aGlobalTestSuites)
     aGlobalTestSuites[nLastIndex].addTest(oTest)
-    return oTest
+    nTestIdx = len(aGlobalTestSuites[nLastIndex].aTests)
+    return aGlobalTestSuites[nLastIndex].aTests[nTestIdx]
 
 func test cTestName, vTestFunc
     return it(cTestName, vTestFunc)
 
 func itSkip cTestName, vReasonOrFunc
-    oTest = it(cTestName, NULL)
+    if len(aGlobalTestSuites) = 0
+        describe("Default Suite", NULL)
+    ok
+    nSuiteIdx = len(aGlobalTestSuites)
+    oTest = new TestCase(cTestName, NULL)
     oTest.bSkipped = true
     if isString(vReasonOrFunc)
         oTest.cSkipReason = vReasonOrFunc
     ok
-    return oTest
+    aGlobalTestSuites[nSuiteIdx].addTest(oTest)
+    nTestIdx = len(aGlobalTestSuites[nSuiteIdx].aTests)
+    return aGlobalTestSuites[nSuiteIdx].aTests[nTestIdx]
 
 func testSkip cTestName, vReasonOrFunc
     return itSkip(cTestName, vReasonOrFunc)
 
 func itTodo cTestName
-    oTest = it(cTestName, NULL)
+    if len(aGlobalTestSuites) = 0
+        describe("Default Suite", NULL)
+    ok
+    nSuiteIdx = len(aGlobalTestSuites)
+    oTest = new TestCase(cTestName, NULL)
     oTest.bTodo = true
     oTest.bSkipped = true
     oTest.cSkipReason = "todo"
-    return oTest
+    aGlobalTestSuites[nSuiteIdx].addTest(oTest)
+    nTestIdx = len(aGlobalTestSuites[nSuiteIdx].aTests)
+    return aGlobalTestSuites[nSuiteIdx].aTests[nTestIdx]
 
 func testTodo cTestName
     return itTodo(cTestName)
 
 func itFailing cTestName, vTestFunc, cReason
-    oTest = it(cTestName, vTestFunc)
+    if len(aGlobalTestSuites) = 0
+        describe("Default Suite", NULL)
+    ok
+    nSuiteIdx = len(aGlobalTestSuites)
+    oTest = new TestCase(cTestName, vTestFunc)
     oTest.bXFail = true
     oTest.cXFailReason = cReason
-    return oTest
+    aGlobalTestSuites[nSuiteIdx].addTest(oTest)
+    nTestIdx = len(aGlobalTestSuites[nSuiteIdx].aTests)
+    return aGlobalTestSuites[nSuiteIdx].aTests[nTestIdx]
 
 func testFailing cTestName, vTestFunc, cReason
     return itFailing(cTestName, vTestFunc, cReason)
@@ -160,6 +179,10 @@ func testXFail cTestName, vTestFunc, cReason
 
 func itEach aDataList, cFormatName, vTestFunc
     if !isList(aDataList) return ok
+    if len(aGlobalTestSuites) = 0
+        describe("Default Suite", NULL)
+    ok
+    nSuiteIdx = len(aGlobalTestSuites)
     for item in aDataList
         aParams = []
         if isList(item)
@@ -174,8 +197,9 @@ func itEach aDataList, cFormatName, vTestFunc
             cFormatted = substr(cFormatted, "{" + string(pIdx - 1) + "}", string(aParams[pIdx]))
         next
 
-        oTest = it(cFormatted, vTestFunc)
+        oTest = new TestCase(cFormatted, vTestFunc)
         oTest.aParams = aParams
+        aGlobalTestSuites[nSuiteIdx].addTest(oTest)
     next
 
 func testEach aDataList, cFormatName, vTestFunc

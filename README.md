@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ring Version](https://img.shields.io/badge/Ring-1.21%2B-blue.svg)](https://ring-lang.github.io)
-[![Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/Azzeddine2017/ringtest)
+[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/Azzeddine2017/ringtest)
 
 **ringtest** is a modern, ultra-fast, and comprehensive unit testing framework and test runner for the [Ring programming language](https://ring-lang.github.io).
 

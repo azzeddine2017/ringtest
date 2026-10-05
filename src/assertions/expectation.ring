@@ -246,7 +246,13 @@ class Expectation
             return true
         ok
         for i = 1 to nLen - 1
-            if vActualValue[i] > vActualValue[i+1]
+            bGreater = false
+            if isString(vActualValue[i]) and isString(vActualValue[i+1])
+                bGreater = (strcmp(vActualValue[i], vActualValue[i+1]) > 0)
+            else
+                bGreater = (vActualValue[i] > vActualValue[i+1])
+            ok
+            if bGreater
                 raise("AssertionError: List is not sorted in ascending order at index " + string(i) + ": [" + string(vActualValue[i]) + "] > [" + string(vActualValue[i+1]) + "]")
             ok
         next
@@ -272,7 +278,7 @@ class Expectation
         ok
 
         if cExpectedSubstr != "" and cExpectedSubstr != NULL
-            if !substr(cErrorMsg, cExpectedSubstr)
+            if !substr(cErrorMsg, cExpectedSubstr) and !substr(lower(cErrorMsg), lower(cExpectedSubstr))
                 raise("AssertionError: Expected error message to contain [" + string(cExpectedSubstr) + "], but caught: [" + cErrorMsg + "]")
             ok
         ok
