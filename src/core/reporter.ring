@@ -30,6 +30,13 @@ class TestReporter
         cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
         ? "  " + cGreen + iif(isWindows(),"[PASS] ", "✓ ") + cReset + " " + cGray + oTest.cName + " " + cTimeStr + cReset
 
+    func printTestSkip oTest
+        cReason = ""
+        if oTest.cSkipReason != "" and oTest.cSkipReason != NULL
+            cReason = " (" + oTest.cSkipReason + ")"
+        ok
+        ? "  " + cYellow + iif(isWindows(),"[SKIP] ", "○ ") + cReset + cGray + oTest.cName + cYellow + cReason + cReset
+
     func printTestFail oTest
         cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
         ? "  " + cRed + iif(isWindows(),"[FAIL] ", "✗ ") + oTest.cName + " " + cTimeStr + cReset
@@ -98,7 +105,7 @@ class TestReporter
         cValue = substr(cTail, 1, nEnd - 1)
         ? "    " + cColor + cLabel + ": " + cReset + cValue
 
-    func printSummary nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime
+    func printSummary nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime, nTestsSkipped
         ? ""
         ? cGray + "--------------------------------------------------" + cReset
         
@@ -109,7 +116,12 @@ class TestReporter
         if nTestsFailed > 0
             cTestStats = cRed + string(nTestsFailed) + " failed" + cReset + ", "
         ok
-        cTestStats += cGreen + string(nTestsPassed) + " passed" + cReset + ", " + string(nTestsPassed + nTestsFailed) + " total"
+        if isNumber(nTestsSkipped) and nTestsSkipped > 0
+            cTestStats += cYellow + string(nTestsSkipped) + " skipped" + cReset + ", "
+        else
+            nTestsSkipped = 0
+        ok
+        cTestStats += cGreen + string(nTestsPassed) + " passed" + cReset + ", " + string(nTestsPassed + nTestsFailed + nTestsSkipped) + " total"
         ? cBold + "Tests:       " + cReset + cTestStats
 
         ? cBold + "Time:        " + cReset + string(nTotalTime) + " s"
@@ -122,7 +134,8 @@ class TestReporter
         ok
         ? ""
 
-    func printJSON nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime
+    func printJSON nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime, nTestsSkipped
+        if !isNumber(nTestsSkipped) nTestsSkipped = 0 ok
         ? "{"
         ? '  "suites": {'
         ? '    "passed": ' + string(nSuitesPassed) + ","
@@ -131,12 +144,14 @@ class TestReporter
         ? '  "tests": {'
         ? '    "passed": ' + string(nTestsPassed) + ","
         ? '    "failed": ' + string(nTestsFailed) + ","
-        ? '    "total": ' + string(nTestsPassed + nTestsFailed)
+        ? '    "skipped": ' + string(nTestsSkipped) + ","
+        ? '    "total": ' + string(nTestsPassed + nTestsFailed + nTestsSkipped)
         ? "  },"
         ? '  "time": ' + string(nTotalTime)
         ? "}"
 
-    func generateHtmlReport aSuites, cFilePath, nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime
+    func generateHtmlReport aSuites, cFilePath, nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime, nTestsSkipped
+        if !isNumber(nTestsSkipped) nTestsSkipped = 0 ok
         cStatus = "PASSED"
         cStatusClass = "badge-pass"
         if nTestsFailed > 0
@@ -145,7 +160,7 @@ class TestReporter
         ok
 
         nPassPercent = 100
-        nTotalTests = nTestsPassed + nTestsFailed
+        nTotalTests = nTestsPassed + nTestsFailed + nTestsSkipped
         if nTotalTests > 0
             nPassPercent = floor((nTestsPassed / nTotalTests) * 100)
         ok
@@ -175,7 +190,18 @@ class TestReporter
                 cTestIcon = "✓"
                 cTestIconClass = "icon-pass"
                 cErrHtml = ""
-                if !oTest.bPassed
+                cSkipBadge = ""
+
+                if oTest.bSkipped
+                    cTestStatus = "skip"
+                    cTestIcon = "○"
+                    cTestIconClass = "icon-skip"
+                    cReasonText = "Skipped"
+                    if oTest.cSkipReason != "" and oTest.cSkipReason != NULL
+                        cReasonText = oTest.cSkipReason
+                    ok
+                    cSkipBadge = '<span class="badge badge-skip" style="margin-left: 8px; font-size: 11px;">' + escapeHtml(cReasonText) + '</span>'
+                but !oTest.bPassed
                     cTestStatus = "fail"
                     cTestIcon = "✗"
                     cTestIconClass = "icon-fail"
@@ -196,7 +222,7 @@ class TestReporter
                 cTestsHtml += '<div class="test-item test-' + cTestStatus + '" data-status="' + cTestStatus + '">' +
                               '  <div class="test-item-header">' +
                               '    <span class="test-icon ' + cTestIconClass + '">' + cTestIcon + '</span>' +
-                              '    <span class="test-name">' + escapeHtml(oTest.cName) + '</span>' +
+                              '    <span class="test-name">' + escapeHtml(oTest.cName) + cSkipBadge + '</span>' +
                               '    <span class="test-time">' + cTestDuration + '</span>' +
                               '  </div>' +
                               cErrHtml +
@@ -233,6 +259,7 @@ class TestReporter
                 '      --text: #f8fafc; --text-muted: #94a3b8;' + nl +
                 '      --pass: #10b981; --pass-bg: rgba(16, 185, 129, 0.12);' + nl +
                 '      --fail: #ef4444; --fail-bg: rgba(239, 68, 68, 0.12);' + nl +
+                '      --skip: #eab308; --skip-bg: rgba(234, 179, 8, 0.12);' + nl +
                 '      --accent: #38bdf8; --tip-bg: rgba(56, 189, 248, 0.1);' + nl +
                 '    }' + nl +
                 '    * { box-sizing: border-box; margin: 0; padding: 0; }' + nl +
@@ -245,6 +272,7 @@ class TestReporter
                 '    .badge { padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }' + nl +
                 '    .badge-pass { background: var(--pass-bg); color: var(--pass); border: 1px solid var(--pass); }' + nl +
                 '    .badge-fail { background: var(--fail-bg); color: var(--fail); border: 1px solid var(--fail); }' + nl +
+                '    .badge-skip { background: var(--skip-bg); color: var(--skip); border: 1px solid var(--skip); }' + nl +
                 '    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }' + nl +
                 '    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }' + nl +
                 '    .stat-label { color: var(--text-muted); font-size: 13px; font-weight: 500; margin-bottom: 6px; }' + nl +
@@ -273,6 +301,7 @@ class TestReporter
                 '    .test-icon { font-weight: bold; width: 18px; text-align: center; }' + nl +
                 '    .icon-pass { color: var(--pass); }' + nl +
                 '    .icon-fail { color: var(--fail); }' + nl +
+                '    .icon-skip { color: var(--skip); }' + nl +
                 '    .test-name { flex: 1; font-size: 14px; }' + nl +
                 '    .test-error { margin-top: 10px; padding: 12px; background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--fail); border-radius: 4px; font-size: 13px; }' + nl +
                 '    .error-msg { font-family: monospace; color: #fca5a5; white-space: pre-wrap; word-break: break-all; }' + nl +
@@ -317,9 +346,10 @@ class TestReporter
                 '      <button class="filter-btn active" id="btn-all" onclick="setTab(\x27all\x27)">All (' + string(nTotalTests) + ')</button>' + nl +
                 '      <button class="filter-btn" id="btn-pass" onclick="setTab(\x27pass\x27)">Passed (' + string(nTestsPassed) + ')</button>' + nl +
                 '      <button class="filter-btn" id="btn-fail" onclick="setTab(\x27fail\x27)">Failed (' + string(nTestsFailed) + ')</button>' + nl +
+                '      <button class="filter-btn" id="btn-skip" onclick="setTab(\x27skip\x27)">Skipped (' + string(nTestsSkipped) + ')</button>' + nl +
                 '    </div>' + nl +
                 '    <div id="suitesList">' + nl +
-                cSuitesHtml +
+                '      cSuitesHtml' +
                 '    </div>' + nl +
                 '    <footer>' + nl +
                 '      Generated by <strong>RingTest</strong> &bull; Modern Test Runner for Ring' + nl +
@@ -363,21 +393,28 @@ class TestReporter
                 '</body>' + nl +
                 '</html>'
 
+        cHtml = substr(cHtml, "cSuitesHtml", cSuitesHtml)
         writeFileContent(cFilePath, cHtml)
         ? cGreen + "✔ HTML Report generated: " + cReset + cGray + cFilePath + cReset
 
-    func generateJunitReport aSuites, cFilePath, nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime
-        nTotalTests = nTestsPassed + nTestsFailed
+    func generateJunitReport aSuites, cFilePath, nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime, nTestsSkipped
+        if !isNumber(nTestsSkipped) nTestsSkipped = 0 ok
+        nTotalTests = nTestsPassed + nTestsFailed + nTestsSkipped
 
         cXml = '<?xml version="1.0" encoding="UTF-8"?>' + nl +
-               '<testsuites name="RingTest" tests="' + string(nTotalTests) + '" failures="' + string(nTestsFailed) + '" errors="0" time="' + string(nTotalTime) + '">' + nl
+               '<testsuites name="RingTest" tests="' + string(nTotalTests) + '" failures="' + string(nTestsFailed) + '" errors="0" skipped="' + string(nTestsSkipped) + '" time="' + string(nTotalTime) + '">' + nl
 
         for oSuite in aSuites
             cSuiteNameEsc = escapeXml(oSuite.cName)
-            cXml += '  <testsuite name="' + cSuiteNameEsc + '" tests="' + string(len(oSuite.aTests)) + '" failures="' + string(oSuite.nFailCount) + '" errors="0" time="' + string(oSuite.nTotalDuration) + '">' + nl
+            cXml += '  <testsuite name="' + cSuiteNameEsc + '" tests="' + string(len(oSuite.aTests)) + '" failures="' + string(oSuite.nFailCount) + '" errors="0" skipped="' + string(oSuite.nSkipCount) + '" time="' + string(oSuite.nTotalDuration) + '">' + nl
             for oTest in oSuite.aTests
                 cTestNameEsc = escapeXml(oTest.cName)
-                if oTest.bPassed
+                if oTest.bSkipped
+                    cSkipMsg = escapeXml(oTest.cSkipReason)
+                    cXml += '    <testcase name="' + cTestNameEsc + '" classname="' + cSuiteNameEsc + '" time="0">' + nl +
+                            '      <skipped message="' + cSkipMsg + '"/>' + nl +
+                            '    </testcase>' + nl
+                but oTest.bPassed
                     cXml += '    <testcase name="' + cTestNameEsc + '" classname="' + cSuiteNameEsc + '" time="' + string(oTest.nDuration) + '"/>' + nl
                 else
                     cErrMsgEsc = escapeXml(oTest.cErrorMessage)

@@ -116,11 +116,70 @@ func it cTestName, vTestFunc
 
     oTest = new TestCase(cTestName, vTestFunc)
     nLastIndex = len(aGlobalTestSuites)
-    oSuite = ref(aGlobalTestSuites[nLastIndex])
-    oSuite.addTest(oTest)
+    aGlobalTestSuites[nLastIndex].addTest(oTest)
+    return oTest
 
 func test cTestName, vTestFunc
-    it(cTestName, vTestFunc)
+    return it(cTestName, vTestFunc)
+
+func itSkip cTestName, vReasonOrFunc
+    oTest = it(cTestName, NULL)
+    oTest.bSkipped = true
+    if isString(vReasonOrFunc)
+        oTest.cSkipReason = vReasonOrFunc
+    ok
+    return oTest
+
+func testSkip cTestName, vReasonOrFunc
+    return itSkip(cTestName, vReasonOrFunc)
+
+func itTodo cTestName
+    oTest = it(cTestName, NULL)
+    oTest.bTodo = true
+    oTest.bSkipped = true
+    oTest.cSkipReason = "todo"
+    return oTest
+
+func testTodo cTestName
+    return itTodo(cTestName)
+
+func itFailing cTestName, vTestFunc, cReason
+    oTest = it(cTestName, vTestFunc)
+    oTest.bXFail = true
+    oTest.cXFailReason = cReason
+    return oTest
+
+func testFailing cTestName, vTestFunc, cReason
+    return itFailing(cTestName, vTestFunc, cReason)
+
+func itXFail cTestName, vTestFunc, cReason
+    return itFailing(cTestName, vTestFunc, cReason)
+
+func testXFail cTestName, vTestFunc, cReason
+    return itFailing(cTestName, vTestFunc, cReason)
+
+func itEach aDataList, cFormatName, vTestFunc
+    if !isList(aDataList) return ok
+    for item in aDataList
+        aParams = []
+        if isList(item)
+            aParams = item
+        else
+            aParams = [item]
+        ok
+
+        cFormatted = cFormatName
+        for pIdx = 1 to len(aParams)
+            cFormatted = substr(cFormatted, "%" + string(pIdx), string(aParams[pIdx]))
+            cFormatted = substr(cFormatted, "{" + string(pIdx - 1) + "}", string(aParams[pIdx]))
+        next
+
+        oTest = it(cFormatted, vTestFunc)
+        oTest.aParams = aParams
+    next
+
+func testEach aDataList, cFormatName, vTestFunc
+    itEach(aDataList, cFormatName, vTestFunc)
 
 func beforeAll vFn
     if nCurrentSuiteIndex > 0 and nCurrentSuiteIndex <= len(aGlobalTestSuites)
@@ -155,12 +214,27 @@ class TestCase
     cName = ""
     vCallback = NULL
     bPassed = false
+    bSkipped = false
+    cSkipReason = ""
+    bTodo = false
+    bXFail = false
+    cXFailReason = ""
     cErrorMessage = ""
     nDuration = 0.0
+    aParams = []
 
     func init cTestName, vFunc
         cName = cTestName
         vCallback = vFunc
+        bPassed = false
+        bSkipped = false
+        cSkipReason = ""
+        bTodo = false
+        bXFail = false
+        cXFailReason = ""
+        cErrorMessage = ""
+        nDuration = 0.0
+        aParams = []
         return self
 
 class TestSuite
@@ -172,7 +246,10 @@ class TestSuite
     aAfterAll = []
     nPassCount = 0
     nFailCount = 0
+    nSkipCount = 0
     nTotalDuration = 0.0
+    lSkipAll = false
+    cSkipReason = ""
 
     func init cSuiteName
         cName = cSuiteName
@@ -181,7 +258,17 @@ class TestSuite
         aBeforeEach = []
         aAfterEach = []
         aAfterAll = []
+        nPassCount = 0
+        nFailCount = 0
+        nSkipCount = 0
+        nTotalDuration = 0.0
+        lSkipAll = false
+        cSkipReason = ""
         return self
 
     func addTest oTest
         add(aTests, oTest)
+
+    func skipAll cReason
+        lSkipAll = true
+        cSkipReason = cReason

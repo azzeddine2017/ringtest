@@ -7,11 +7,11 @@ aPackageInfo = [
 	:developer = "Azzeddine Remmal",
 	:email = "azzeddine.remmal@gmail.com",
 	:license = "MIT License",
-	:version = "1.0.5",
+	:version = "1.2.0",
 	:ringversion = "1.21",
 	:versions = [
 		[
-			:version = "1.0.5",
+			:version = "1.2.0",
 			:branch = "master"
 		]
 	],
@@ -41,6 +41,7 @@ aPackageInfo = [
 		"src/core/worker.ring",
 		"src/core/reporter.ring",
 		"src/core/mock.ring",
+		"src/core/benchmark.ring",
 		"src/cli/args_parser.ring",
 		"tests/sample_test.ring",
 		"tests/math_test.ring",
@@ -49,7 +50,10 @@ aPackageInfo = [
 		"tests/hooks_test.ring",
 		"tests/context_test.ring",
 		"tests/mock_test.ring",
-		"tests/diagnostic_demo_test.ring"
+		"tests/diagnostic_demo_test.ring",
+		"tests/extended_assertions_test.ring",
+		"tests/advanced_features_test.ring",
+		"tests/benchmark_test.ring"
 	],
 	:ringfolderfiles = [
 

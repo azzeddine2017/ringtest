@@ -34,23 +34,41 @@ func getMock cOriginalFunc
 class Mock
     cFuncName = ""
     vMockFn = NULL
+    vReturnValue = NULL
+    bHasCustomReturn = false
     nCallCount = 0
     aCallArgs = []
 
     func init cName, vFn
         cFuncName = cName
         vMockFn = vFn
+        vReturnValue = NULL
+        bHasCustomReturn = false
         nCallCount = 0
         aCallArgs = []
         return self
 
+    func setReturn vVal
+        vReturnValue = vVal
+        bHasCustomReturn = true
+        return self
+
+    func mockReturnValue vVal
+        return setReturn(vVal)
+
     func doCall
         nCallCount++
         add(aCallArgs, sysargv)
+        if bHasCustomReturn
+            return vReturnValue
+        ok
         if !isNull(vMockFn)
             return call vMockFn()
         ok
         return NULL
+
+    func invoke
+        return doCall()
 
     func getCallCount
         return nCallCount
@@ -63,3 +81,12 @@ class Mock
 
     func wasCalled
         return nCallCount > 0
+
+    func wasCalledTimes nTimes
+        return nCallCount = nTimes
+
+    func reset
+        nCallCount = 0
+        aCallArgs = []
+        vReturnValue = NULL
+        bHasCustomReturn = false

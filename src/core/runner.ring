@@ -16,6 +16,7 @@ class TestRunner
     aAllSuites = []
     nTotalPassed = 0
     nTotalFailed = 0
+    nTotalSkipped = 0
     nSuitesPassed = 0
     nSuitesTotal = 0
     cFilter = ""
@@ -191,8 +192,11 @@ class TestRunner
                     if s.nFailCount = 0 and len(s.aTests) > 0
                         nSuitesPassed++
                     ok
+                    nTotalSkipped += s.nSkipCount
                     for t in s.aTests
-                        if t.bPassed
+                        if t.bSkipped
+                            # Already counted via suite or single test
+                        but t.bPassed
                             nTotalPassed++
                         else
                             nTotalFailed++
@@ -230,15 +234,27 @@ class TestRunner
             cScript += "  [" + '"' + escapeRingString(aGlobalTestSuites[sIdx].cName) + '", ' +
                        string(aGlobalTestSuites[sIdx].nPassCount) + ", " +
                        string(aGlobalTestSuites[sIdx].nFailCount) + ", " +
+                       string(aGlobalTestSuites[sIdx].nSkipCount) + ", " +
                        string(aGlobalTestSuites[sIdx].nTotalDuration) + ", [" + nl
             for tIdx = 1 to len(aGlobalTestSuites[sIdx].aTests)
                 oTest = aGlobalTestSuites[sIdx].aTests[tIdx]
                 cPassFlag = "0"
                 if oTest.bPassed cPassFlag = "1" ok
+                cSkipFlag = "0"
+                if oTest.bSkipped cSkipFlag = "1" ok
+                cTodoFlag = "0"
+                if oTest.bTodo cTodoFlag = "1" ok
+                cXFailFlag = "0"
+                if oTest.bXFail cXFailFlag = "1" ok
+
                 cScript += "    [" + '"' + escapeRingString(oTest.cName) + '", ' +
                            cPassFlag + ", " +
                            string(oTest.nDuration) + ', "' +
-                           escapeRingString(oTest.cErrorMessage) + '"]'
+                           escapeRingString(oTest.cErrorMessage) + '", ' +
+                           cSkipFlag + ', "' +
+                           escapeRingString(oTest.cSkipReason) + '", ' +
+                           cTodoFlag + ", " +
+                           cXFailFlag + ']'
                 if tIdx < len(aGlobalTestSuites[sIdx].aTests) cScript += "," ok
                 cScript += nl
             next
@@ -273,14 +289,32 @@ class TestRunner
             oSuite = new TestSuite(aSuiteItem[1])
             oSuite.nPassCount = aSuiteItem[2]
             oSuite.nFailCount = aSuiteItem[3]
-            oSuite.nTotalDuration = aSuiteItem[4]
-            aTestsList = aSuiteItem[5]
+            if len(aSuiteItem) >= 6 and isList(aSuiteItem[6])
+                oSuite.nSkipCount = aSuiteItem[4]
+                oSuite.nTotalDuration = aSuiteItem[5]
+                aTestsList = aSuiteItem[6]
+            else
+                oSuite.nTotalDuration = aSuiteItem[4]
+                aTestsList = aSuiteItem[5]
+            ok
             for tIdx = 1 to len(aTestsList)
                 aTestItem = aTestsList[tIdx]
                 oTest = new TestCase(aTestItem[1], NULL)
                 oTest.bPassed = (aTestItem[2] = 1 or aTestItem[2] = "1" or aTestItem[2] = true)
                 oTest.nDuration = aTestItem[3]
                 oTest.cErrorMessage = aTestItem[4]
+                if len(aTestItem) >= 5
+                    oTest.bSkipped = (aTestItem[5] = 1 or aTestItem[5] = "1" or aTestItem[5] = true)
+                ok
+                if len(aTestItem) >= 6
+                    oTest.cSkipReason = aTestItem[6]
+                ok
+                if len(aTestItem) >= 7
+                    oTest.bTodo = (aTestItem[7] = 1 or aTestItem[7] = "1" or aTestItem[7] = true)
+                ok
+                if len(aTestItem) >= 8
+                    oTest.bXFail = (aTestItem[8] = 1 or aTestItem[8] = "1" or aTestItem[8] = true)
+                ok
                 add(oSuite.aTests, oTest)
             next
             add(aParsedSuites, oSuite)
@@ -516,6 +550,7 @@ class TestRunner
         nSuitesTotal = 0
         nTotalPassed = 0
         nTotalFailed = 0
+        nTotalSkipped = 0
 
         # Run Global beforeAll hooks
         aGlobalBAll = getGlobalBeforeAll()
@@ -540,6 +575,22 @@ class TestRunner
                     loop
                 ok
 
+                # Suite-level skipAll check
+                if aGlobalTestSuites[sIdx].lSkipAll
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bSkipped = true
+                    if aGlobalTestSuites[sIdx].cSkipReason != ""
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cSkipReason = aGlobalTestSuites[sIdx].cSkipReason
+                    ok
+                ok
+
+                # Skip handling
+                if aGlobalTestSuites[sIdx].aTests[tIdx].bSkipped
+                    nTotalSkipped++
+                    aGlobalTestSuites[sIdx].nSkipCount++
+                    oReporter.printTestSkip(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    loop
+                ok
+
                 nTestStart = clock()
 
                 # Run Global beforeEach hooks
@@ -556,7 +607,7 @@ class TestRunner
                 # Run test body safely
                 try
                     if !isNull(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback)
-                        safeCall(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx])
+                        safeCallTest(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx].aParams, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
                     aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
                     aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
@@ -564,13 +615,23 @@ class TestRunner
                     aGlobalTestSuites[sIdx].nPassCount++
                     oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                 catch
-                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
-                    aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
-                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
-                    nTotalFailed++
-                    aGlobalTestSuites[sIdx].nFailCount++
-                    bSuiteSuccess = false
-                    oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    if aGlobalTestSuites[sIdx].aTests[tIdx].bXFail
+                        # Expected failure!
+                        aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = "(Expected Failure) " + cCatchError
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        nTotalPassed++
+                        aGlobalTestSuites[sIdx].nPassCount++
+                        oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    else
+                        aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        nTotalFailed++
+                        aGlobalTestSuites[sIdx].nFailCount++
+                        bSuiteSuccess = false
+                        oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    ok
                 done
 
                 # Run Suite afterEach hooks
@@ -700,6 +761,22 @@ class TestRunner
                     loop
                 ok
 
+                # Suite-level skipAll check
+                if aGlobalTestSuites[sIdx].lSkipAll
+                    aGlobalTestSuites[sIdx].aTests[tIdx].bSkipped = true
+                    if aGlobalTestSuites[sIdx].cSkipReason != ""
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cSkipReason = aGlobalTestSuites[sIdx].cSkipReason
+                    ok
+                ok
+
+                # Skip handling
+                if aGlobalTestSuites[sIdx].aTests[tIdx].bSkipped
+                    nTotalSkipped++
+                    aGlobalTestSuites[sIdx].nSkipCount++
+                    oReporter.printTestSkip(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    loop
+                ok
+
                 nTestStart = clock()
 
                 # Run Global beforeEach hooks
@@ -716,7 +793,7 @@ class TestRunner
                 # Run test body safely
                 try
                     if !isNull(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback)
-                        safeCall(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx])
+                        safeCallTest(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx].aParams, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
                     aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
                     aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
@@ -724,13 +801,23 @@ class TestRunner
                     aGlobalTestSuites[sIdx].nPassCount++
                     oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                 catch
-                    aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
-                    aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
-                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
-                    nTotalFailed++
-                    aGlobalTestSuites[sIdx].nFailCount++
-                    bSuiteSuccess = false
-                    oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    if aGlobalTestSuites[sIdx].aTests[tIdx].bXFail
+                        # Expected failure!
+                        aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = "(Expected Failure) " + cCatchError
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        nTotalPassed++
+                        aGlobalTestSuites[sIdx].nPassCount++
+                        oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    else
+                        aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
+                        aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        nTotalFailed++
+                        aGlobalTestSuites[sIdx].nFailCount++
+                        bSuiteSuccess = false
+                        oReporter.printTestFail(aGlobalTestSuites[sIdx].aTests[tIdx])
+                    ok
                 done
 
                 # Run Suite afterEach hooks
@@ -777,6 +864,7 @@ class TestRunner
         aAllSuites = []
         nTotalPassed = 0
         nTotalFailed = 0
+        nTotalSkipped = 0
         nSuitesPassed = 0
         nSuitesTotal = 0
 
@@ -792,21 +880,21 @@ class TestRunner
         nTotalTime = (clock() - nGlobalStart) / clockspersecond()
         
         if bJsonOutput
-            oReporter.printJSON(nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime)
+            oReporter.printJSON(nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime, nTotalSkipped)
         else
-            oReporter.printSummary(nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime)
+            oReporter.printSummary(nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime, nTotalSkipped)
         ok
 
         # Generate HTML report if requested
         if oParser != NULL and oParser.bHtmlReport
             cHtmlPath = resolveReportPath(oParser.cHtmlReportPath, "test-report.html")
-            oReporter.generateHtmlReport(aAllSuites, cHtmlPath, nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime)
+            oReporter.generateHtmlReport(aAllSuites, cHtmlPath, nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime, nTotalSkipped)
         ok
 
         # Generate JUnit XML report if requested
         if oParser != NULL and oParser.bJunitReport
             cJunitPath = resolveReportPath(oParser.cJunitReportPath, "test-report.xml")
-            oReporter.generateJunitReport(aAllSuites, cJunitPath, nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime)
+            oReporter.generateJunitReport(aAllSuites, cJunitPath, nSuitesPassed, nSuitesTotal, nTotalPassed, nTotalFailed, nTotalTime, nTotalSkipped)
         ok
 
         return (nTotalFailed = 0)
@@ -834,6 +922,7 @@ class TestRunner
         # 1. Initial test run
         nTotalPassed = 0
         nTotalFailed = 0
+        nTotalSkipped = 0
         nSuitesPassed = 0
         nSuitesTotal = 0
         findTestFiles(cWatchDir)
@@ -854,6 +943,7 @@ class TestRunner
                 ? ""
                 nTotalPassed = 0
                 nTotalFailed = 0
+                nTotalSkipped = 0
                 nSuitesPassed = 0
                 nSuitesTotal = 0
                 findTestFiles(cWatchDir)
@@ -909,6 +999,27 @@ class TestRunner
         next
 
     private
+
+    func safeCallTest vFunc, aParams, oArg
+        if isNull(vFunc) return ok
+        if isList(aParams) and len(aParams) > 0
+            nLen = len(aParams)
+            if nLen = 1
+                call vFunc(aParams[1])
+            but nLen = 2
+                call vFunc(aParams[1], aParams[2])
+            but nLen = 3
+                call vFunc(aParams[1], aParams[2], aParams[3])
+            but nLen = 4
+                call vFunc(aParams[1], aParams[2], aParams[3], aParams[4])
+            but nLen = 5
+                call vFunc(aParams[1], aParams[2], aParams[3], aParams[4], aParams[5])
+            else
+                call vFunc(aParams)
+            ok
+            return
+        ok
+        safeCall(vFunc, oArg)
 
     func safeCall vFunc, oArg
         if isNull(vFunc) return ok

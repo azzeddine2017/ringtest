@@ -2,7 +2,7 @@
 
 load "stdlibcore.ring"
 load "src/ringtest.ring"
-
+cVersion = "1.2.0"
 func main
    
     oParser = new ArgsParser
@@ -14,7 +14,7 @@ func main
     ok
 
     if oParser.bShowVersion
-        ? "ringtest version 1.0.4"
+        ? "ringtest version " + cVersion
         return
     ok
 
@@ -29,21 +29,21 @@ func main
         bSuccess = runner.runFile(oParser.cTargetFile)
         nTotalTime = (clock() - nStart) / clockspersecond()
         if runner.bJsonOutput
-            runner.oReporter.printJSON(runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime)
+            runner.oReporter.printJSON(runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime, runner.nTotalSkipped)
         else
-            runner.oReporter.printSummary(runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime)
+            runner.oReporter.printSummary(runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime, runner.nTotalSkipped)
         ok
 
         # Generate HTML report if requested
         if oParser.bHtmlReport
             cHtmlPath = runner.resolveReportPath(oParser.cHtmlReportPath, "test-report.html")
-            runner.oReporter.generateHtmlReport(runner.aAllSuites, cHtmlPath, runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime)
+            runner.oReporter.generateHtmlReport(runner.aAllSuites, cHtmlPath, runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime, runner.nTotalSkipped)
         ok
 
         # Generate JUnit XML report if requested
         if oParser.bJunitReport
             cJunitPath = runner.resolveReportPath(oParser.cJunitReportPath, "test-report.xml")
-            runner.oReporter.generateJunitReport(runner.aAllSuites, cJunitPath, runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime)
+            runner.oReporter.generateJunitReport(runner.aAllSuites, cJunitPath, runner.nSuitesPassed, runner.nSuitesTotal, runner.nTotalPassed, runner.nTotalFailed, nTotalTime, runner.nTotalSkipped)
         ok
 
         if !bSuccess

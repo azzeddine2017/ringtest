@@ -134,6 +134,192 @@ class Expectation
         ok
         return true
 
+    func toBeNull
+        if !isNull(vActualValue)
+            raise("AssertionError: Expected NULL, but received [" + string(vActualValue) + "] (" + type(vActualValue) + ")")
+        ok
+        return true
+
+    func notToBeNull
+        if isNull(vActualValue)
+            raise("AssertionError: Expected non-NULL value, but received NULL")
+        ok
+        return true
+
+    func toBeNotNull
+        return notToBeNull()
+
+    func toBeString
+        if !isString(vActualValue)
+            raise("AssertionError: Expected String, but received [" + type(vActualValue) + "]")
+        ok
+        return true
+
+    func toBeNumber
+        if !isNumber(vActualValue)
+            raise("AssertionError: Expected Number, but received [" + type(vActualValue) + "]")
+        ok
+        return true
+
+    func toBeList
+        if !isList(vActualValue)
+            raise("AssertionError: Expected List, but received [" + type(vActualValue) + "]")
+        ok
+        return true
+
+    func toBeObject
+        if !isObject(vActualValue)
+            raise("AssertionError: Expected Object, but received [" + type(vActualValue) + "]")
+        ok
+        return true
+
+    func toBeGreaterThanOrEqual nExpected
+        if !isNumber(vActualValue) or !isNumber(nExpected)
+            raise("AssertionError: Both actual and expected values must be numbers for comparison")
+        ok
+        if !(vActualValue >= nExpected)
+            raise("AssertionError: Expected [" + string(vActualValue) + "] to be >= [" + string(nExpected) + "]")
+        ok
+        return true
+
+    func toBeGte nExpected
+        return toBeGreaterThanOrEqual(nExpected)
+
+    func toBeLessThanOrEqual nExpected
+        if !isNumber(vActualValue) or !isNumber(nExpected)
+            raise("AssertionError: Both actual and expected values must be numbers for comparison")
+        ok
+        if !(vActualValue <= nExpected)
+            raise("AssertionError: Expected [" + string(vActualValue) + "] to be <= [" + string(nExpected) + "]")
+        ok
+        return true
+
+    func toBeLte nExpected
+        return toBeLessThanOrEqual(nExpected)
+
+    func toBeCloseTo nExpected, nDelta
+        if !isNumber(vActualValue) or !isNumber(nExpected)
+            raise("AssertionError: toBeCloseTo() requires numeric values")
+        ok
+        if isNull(nDelta) or !isNumber(nDelta)
+            nDelta = 0.001
+        ok
+        nDiff = vActualValue - nExpected
+        if nDiff < 0
+            nDiff = -nDiff
+        ok
+        if nDiff > nDelta
+            raise("AssertionError: Expected [" + string(vActualValue) + "] to be close to [" + string(nExpected) + "] within delta [" + string(nDelta) + "], diff is [" + string(nDiff) + "]")
+        ok
+        return true
+
+    func toStartWith cPrefix
+        if !isString(vActualValue) or !isString(cPrefix)
+            raise("AssertionError: toStartWith() requires string values")
+        ok
+        if left(vActualValue, len(cPrefix)) != cPrefix
+            raise("AssertionError: Expected [" + string(vActualValue) + "] to start with [" + string(cPrefix) + "]")
+        ok
+        return true
+
+    func toStartsWith cPrefix
+        return toStartWith(cPrefix)
+
+    func toEndWith cSuffix
+        if !isString(vActualValue) or !isString(cSuffix)
+            raise("AssertionError: toEndWith() requires string values")
+        ok
+        if right(vActualValue, len(cSuffix)) != cSuffix
+            raise("AssertionError: Expected [" + string(vActualValue) + "] to end with [" + string(cSuffix) + "]")
+        ok
+        return true
+
+    func toEndsWith cSuffix
+        return toEndWith(cSuffix)
+
+    func toBeSorted
+        if !isList(vActualValue)
+            raise("AssertionError: toBeSorted() requires a list value")
+        ok
+        nLen = len(vActualValue)
+        if nLen <= 1
+            return true
+        ok
+        for i = 1 to nLen - 1
+            if vActualValue[i] > vActualValue[i+1]
+                raise("AssertionError: List is not sorted in ascending order at index " + string(i) + ": [" + string(vActualValue[i]) + "] > [" + string(vActualValue[i+1]) + "]")
+            ok
+        next
+        return true
+
+    func toThrowError cExpectedSubstr
+        bErrorOccurred = false
+        cErrorMsg = ""
+
+        if isString(vActualValue)
+            try
+                eval(vActualValue)
+            catch
+                bErrorOccurred = true
+                cErrorMsg = cCatchError
+            done
+        else
+            raise("AssertionError: toThrowError() expects a string containing Ring code to evaluate")
+        ok
+
+        if !bErrorOccurred
+            raise("AssertionError: Expected code to throw an error, but it executed successfully")
+        ok
+
+        if cExpectedSubstr != "" and cExpectedSubstr != NULL
+            if !substr(cErrorMsg, cExpectedSubstr)
+                raise("AssertionError: Expected error message to contain [" + string(cExpectedSubstr) + "], but caught: [" + cErrorMsg + "]")
+            ok
+        ok
+        return true
+
+    func notToThrow
+        if isString(vActualValue)
+            try
+                eval(vActualValue)
+            catch
+                raise("AssertionError: Expected code not to throw, but caught error: " + cCatchError)
+            done
+        else
+            raise("AssertionError: notToThrow() expects a string containing Ring code to evaluate")
+        ok
+        return true
+
+    func toNotThrow
+        return notToThrow()
+
+    func toHaveBeenCalled
+        if !isObject(vActualValue)
+            raise("AssertionError: toHaveBeenCalled() requires a Mock object")
+        ok
+        try
+            if !vActualValue.wasCalled()
+                raise("AssertionError: Expected mock function to have been called, but call count is 0")
+            ok
+        catch
+            raise(cCatchError)
+        done
+        return true
+
+    func toHaveBeenCalledTimes nExpectedTimes
+        if !isObject(vActualValue)
+            raise("AssertionError: toHaveBeenCalledTimes() requires a Mock object")
+        ok
+        try
+            nActualCalls = vActualValue.getCallCount()
+            if nActualCalls != nExpectedTimes
+                raise("AssertionError: Expected mock to have been called " + string(nExpectedTimes) + " times, but was called " + string(nActualCalls) + " times")
+            ok
+        catch
+            raise(cCatchError)
+        done
+        return true
+
     private
 
     func areEqual vVal1, vVal2
