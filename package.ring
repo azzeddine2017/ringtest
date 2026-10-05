@@ -7,12 +7,12 @@ aPackageInfo = [
 	:developer = "Azzeddine Remmal",
 	:email = "azzeddine.remmal@gmail.com",
 	:license = "MIT License",
-	:version = "1.0.4",
+	:version = "1.0.5",
 	:ringversion = "1.21",
 	:versions = [
 		[
-			:version = "1.0.4",
-			:branch = "main"
+			:version = "1.0.5",
+			:branch = "master"
 		]
 	],
 	:libs = [
@@ -29,12 +29,11 @@ aPackageInfo = [
 	],
 	:files = [
 		"main.ring",
+		"setup.ring",
 		"LICENSE",
 		".gitignore",
 		"README.md",
 		"package.ring",
-		"setup.bat",
-		"setup.sh",
 		"src/ringtest.ring",
 		"src/assertions/expectation.ring",
 		"src/core/suite.ring",
@@ -53,9 +52,7 @@ aPackageInfo = [
 		"tests/diagnostic_demo_test.ring"
 	],
 	:ringfolderfiles = [
-        "bin/ringtest.bat",
-		"bin/ringtest",
-		"bin/load/ringtest.ring"
+
 	],
 	:windowsfiles = [
 
@@ -67,22 +64,22 @@ aPackageInfo = [
 
 	],
 	:windowsringfolderfiles = [
-		"bin/ringtest.bat"
+
 	],
 	:linuxringfolderfiles = [
-		"bin/ringtest"
+
 	],
 	:macosringfolderfiles = [
-		"bin/ringtest"
+
 	],
 	:run = "ring main.ring",
-	:setup = "",
+	:setup = "ring setup.ring",
 	:windowssetup = "",
 	:linuxsetup = "",
 	:macossetup = "",
 	:ubuntusetup = "",
 	:fedorasetup = "",
-	:remove = "",
+	:remove = "ring setup.ring remove",
 	:windowsremove = "",
 	:linuxremove = "",
 	:macosremove = "",

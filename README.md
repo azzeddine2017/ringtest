@@ -35,22 +35,18 @@ It brings familiar BDD/TDD-style assertions (`describe`, `it`, `test`, `expect`)
 ringpm install ringtest from Azzeddine2017
 ```
 
-### Method 2: Global Setup from Source
-Clone the repository and run the setup script:
+### Method 2: Global Setup from Source (Pure Ring)
+Clone the repository and run the setup installer with Ring on any OS (Windows, Linux, macOS):
 
-**Windows:**
-```cmd
-git clone https://github.com/Azzeddine2017/ringtest.git
-cd ringtest
-setup.bat
-```
-
-**Linux / macOS:**
 ```bash
 git clone https://github.com/Azzeddine2017/ringtest.git
 cd ringtest
-chmod +x setup.sh
-./setup.sh
+ring setup.ring
+```
+
+To uninstall:
+```bash
+ring setup.ring remove
 ```
 
 ---
