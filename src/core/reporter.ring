@@ -27,7 +27,7 @@ class TestReporter
         ? cBold + cSuiteName + cReset
 
     func printTestPass oTest
-        cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
+        cTimeStr = formatTestTime(oTest.nDuration)
         ? "  " + cGreen + iif(isWindows(),"[PASS] ", "✓ ") + cReset + " " + cGray + oTest.cName + " " + cTimeStr + cReset
 
     func printTestSkip oTest
@@ -38,7 +38,7 @@ class TestReporter
         ? "  " + cYellow + iif(isWindows(),"[SKIP] ", "○ ") + cReset + cGray + oTest.cName + cYellow + cReason + cReset
 
     func printTestFail oTest
-        cTimeStr = "(" + string(floor(oTest.nDuration * 1000)) + " ms)"
+        cTimeStr = formatTestTime(oTest.nDuration)
         ? "  " + cRed + iif(isWindows(),"[FAIL] ", "✗ ") + oTest.cName + " " + cTimeStr + cReset
         ? "    " + cRed + cBold + "Error: " + cReset + cRed + oTest.cErrorMessage + cReset
         
@@ -469,6 +469,35 @@ class TestReporter
         cRes = substr(cRes, '"', "&quot;")
         cRes = substr(cRes, "'", "&apos;")
         return cRes
+
+    func formatTestTime nSec
+        if !isNumber(nSec) or nSec <= 0.00000001
+            return "(< 1 ms)"
+        but nSec < 0.000001
+            # Nanoseconds
+            nNs = floor(nSec * 1000000000)
+            return "(" + string(nNs) + " ns)"
+        but nSec < 0.001
+            # Microseconds or fractional ms
+            nUs = floor(nSec * 1000000)
+            if nUs >= 100
+                nMs = floor(nSec * 10000) / 10.0
+                return "(" + string(nMs) + " ms)"
+            ok
+            return "(" + string(nUs) + " µs)"
+        but nSec < 1.0
+            nMs = floor(nSec * 1000)
+            if nMs = 0
+                nFraction = floor(nSec * 10000) / 10.0
+                if nFraction > 0
+                    return "(" + string(nFraction) + " ms)"
+                ok
+                return "(< 1 ms)"
+            ok
+            return "(" + string(nMs) + " ms)"
+        else
+            return "(" + string(floor(nSec * 100) / 100) + " s)"
+        ok
 
     func iif bCondition, aTrue, aFalse 
         if bCondition return aTrue ok

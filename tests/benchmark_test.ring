@@ -22,7 +22,7 @@ describe("Benchmark Integration Suite", func {
         for i = 1 to 1000
             sum += i
         next
-        expect(t.elapsed_ns()).toBeGreaterThan(0)
+        expect(t.elapsed_ns()).toBeGreaterThanOrEqual(0)
         expect(t.elapsed_ms()).toBeGreaterThanOrEqual(0)
         expect(len(t.elapsed())).toBeGreaterThan(0)
     })

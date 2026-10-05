@@ -2,7 +2,10 @@
 
 load "stdlibcore.ring"
 load "src/ringtest.ring"
-load "AlQalam.ring"
+try
+    load "AlQalam.ring"
+catch
+done
 
 cVersion = "1.2.0"
 func main

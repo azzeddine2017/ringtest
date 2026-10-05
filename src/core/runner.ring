@@ -591,7 +591,8 @@ class TestRunner
                     loop
                 ok
 
-                nTestStart = clock()
+                oTestTimer = new TestTimer()
+                oTestTimer.reset()
 
                 # Run Global beforeEach hooks
                 aGlobalBEach = getGlobalBeforeEach()
@@ -610,7 +611,7 @@ class TestRunner
                         safeCallTest(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx].aParams, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
                     aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
-                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                     nTotalPassed++
                     aGlobalTestSuites[sIdx].nPassCount++
                     oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
@@ -619,14 +620,14 @@ class TestRunner
                         # Expected failure!
                         aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
                         aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = "(Expected Failure) " + cCatchError
-                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                         nTotalPassed++
                         aGlobalTestSuites[sIdx].nPassCount++
                         oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                     else
                         aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
                         aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
-                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                         nTotalFailed++
                         aGlobalTestSuites[sIdx].nFailCount++
                         bSuiteSuccess = false
@@ -777,7 +778,8 @@ class TestRunner
                     loop
                 ok
 
-                nTestStart = clock()
+                oTestTimer = new TestTimer()
+                oTestTimer.reset()
 
                 # Run Global beforeEach hooks
                 aGlobalBEach = getGlobalBeforeEach()
@@ -796,7 +798,7 @@ class TestRunner
                         safeCallTest(aGlobalTestSuites[sIdx].aTests[tIdx].vCallback, aGlobalTestSuites[sIdx].aTests[tIdx].aParams, aGlobalTestSuites[sIdx].aTests[tIdx])
                     ok
                     aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
-                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                    aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                     nTotalPassed++
                     aGlobalTestSuites[sIdx].nPassCount++
                     oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
@@ -805,14 +807,14 @@ class TestRunner
                         # Expected failure!
                         aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = true
                         aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = "(Expected Failure) " + cCatchError
-                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                         nTotalPassed++
                         aGlobalTestSuites[sIdx].nPassCount++
                         oReporter.printTestPass(aGlobalTestSuites[sIdx].aTests[tIdx])
                     else
                         aGlobalTestSuites[sIdx].aTests[tIdx].bPassed = false
                         aGlobalTestSuites[sIdx].aTests[tIdx].cErrorMessage = cCatchError
-                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = (clock() - nTestStart) / clockspersecond()
+                        aGlobalTestSuites[sIdx].aTests[tIdx].nDuration = oTestTimer.elapsed_s()
                         nTotalFailed++
                         aGlobalTestSuites[sIdx].nFailCount++
                         bSuiteSuccess = false
