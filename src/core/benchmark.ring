@@ -16,10 +16,10 @@ func benchmarkCompare cName1, vFunc1, cName2, vFunc2, nIterations
     return $oGlobalBenchmark.compare(cName1, vFunc1, cName2, vFunc2, nIterations)
 
 func chronos
-    return new TestTimer
+    return new TestTimer()
 
 func testTimer
-    return new TestTimer
+    return new TestTimer()
 
 # ======================================================================
 # TestTimer: High-Precision Timekeeper (Auto-uses QalamChronos if loaded)
