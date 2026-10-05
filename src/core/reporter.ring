@@ -395,7 +395,7 @@ class TestReporter
 
         cHtml = substr(cHtml, "cSuitesHtml", cSuitesHtml)
         writeFileContent(cFilePath, cHtml)
-        ? cGreen + "✔ HTML Report generated: " + cReset + cGray + cFilePath + cReset
+        ? cGreen + " -HTML Report generated: " + cReset + cGray + cFilePath + cReset
 
     func generateJunitReport aSuites, cFilePath, nSuitesPassed, nSuitesTotal, nTestsPassed, nTestsFailed, nTotalTime, nTestsSkipped
         if !isNumber(nTestsSkipped) nTestsSkipped = 0 ok
